@@ -1,0 +1,38 @@
+<div id="app-telesale">
+    <div v-if="init">
+        <p>Đang tải dữ liệu: {{counter}}</p>
+    </div>
+    <div v-else>
+
+    </div>
+</div>
+<script>
+    var app_telesale = new Vue({
+        el: "#app-telesale",
+        data: {
+            init: true,
+            counter: 0,
+            intervalCounter: 0
+        },
+        methods: {
+
+        },
+        created: function(){
+            var that = this;
+            that.intervalCounter = setInterval(function(){
+                that.counter += 1;
+                if(that.init){
+                    clearInterval(that.intervalCounter);
+                }
+            }, 1000);
+            $.ajax("/sheets", {
+                method: "POST",
+                body: {
+                    url: "https://script.google.com/macros/s/AKfycbyiL1biuCCIp6doX5Ab3d-DwXkHscStGMHezW3bUw9pMJUagyedKRbnmdHPpSr8gwd-/exec?sheetName=REPORT"
+                }
+            }, function(data){
+                console.log(data);
+            })
+        }
+    })
+</script>

@@ -1,0 +1,62 @@
+<div id="app-sale" class="border border-primary p-3">
+    <div v-if="init">
+        <p>Đang tải dữ liệu: {{counter}}</p>
+    </div>
+    <div v-else>
+        <table class="table table-bordered table-striped">
+            <tr>
+                <td>Doanh số</td>
+                <td class="text-right">{{numberWithCommas(total)}}</td>
+            </tr>
+            <tr>
+                <td>Số đơn</td>
+                <td><table class="table table-bordered table-striped">
+                    <tr v-for="invoice, index in invoices">
+                        <td>{{index+1}}</td>
+                        <td class="text-right">{{numberWithCommas(invoice.total)}}</td>
+                    </tr>
+                </table></td>
+            </tr>
+        </table>
+    </div>
+</div>
+<script>
+    var app_sale = new Vue({
+        el: "#app-sale",
+        data: {
+            init: true,
+            counter: 0,
+            intervalCounter: {},
+            total: 0,
+            invoices: []
+        },
+        methods: {
+            numberWithCommas: function (x) {
+                return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            }
+        },
+        created: function(){
+            var that = this;
+            that.intervalCounter = setInterval(function(){
+                if(that.init){
+                    that.counter += 1;
+                    if(that.counter == 5){
+                        that.init = false;
+                    }
+                } else {
+                    clearInterval(that.intervalCounter);
+                }
+            }, 1000);
+            $.get("/sales?to=" + (new Date()).toISOString().split("T")[0]+ "&from=" + (new Date()).toISOString().split("T")[0], function(d){
+                that.init = false;
+                total = d.data.data.reduce(function(t, e){
+                    return {
+                        total: t.total + e.total
+                    }
+                });
+                that.total = total.total;
+                that.invoices = d.data.data;
+            });
+        }
+    })
+</script>

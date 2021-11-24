@@ -1,0 +1,297 @@
+<html>
+    <head>
+        <%- include("../header.ejs"); %>
+    </head>
+    <body>
+        <%- include("../menu.ejs"); %>
+        <div class="container-fluid" id="app-index-crm">
+            <div v-if="init">
+                <p>Đang tạo dữ liệu</p>
+            </div>
+            <div v-else class="p-2">
+                <div class="row">
+                    <div class="col alert alert-success">
+                        <h5>Đang mua hàng</h5>
+                        <p><i>Đang mua trong phạm vi 7 ngày qua</i></p>
+                        <table class="table">
+                            <tr>
+                                <td>Số khách</td>
+                                <td>{{filterDataWithCounter(0, 7).length}}</td>
+                            </tr>
+                            <tr>
+                                <td>Nợ</td>
+                                <td>{{numberWithCommas(filterDataWithCounter(0, 7).debt)}}</td>
+                            </tr>
+                        </table>
+                        <div class="d-flex">
+                            <div class="p-2 mr-auto">
+                                <span v-if="filterDataWithCounter(0, 7).length - filterDataWithCounter(7, 14, true).length > 0" class="badge badge-success">
+                                    Tăng {{filterDataWithCounter(0, 7).length - filterDataWithCounter(7, 14, true).length}}
+                                </span>
+                                <span v-else class="badge badge-danger">
+                                    Giảm {{filterDataWithCounter(0, 7).length - filterDataWithCounter(7, 14, true).length}}
+                                </span>
+                            </div>
+                            <div class="p-2"><button class="btn btn-secondary" @click="bindShowDetail(0, 7)">Xem chi tiết</button></div>
+                        </div>
+                    </div>
+                    <div class="col border alert alert-primary">
+                        <h5>Cần quan tâm</h5>
+                        <p><i>Mua 3 tuần qua</i></p>
+                        <table class="table">
+                            <tr>
+                                <td>Số khách</td>
+                                <td>{{filterDataWithCounter(8, 21).length}}</td>
+                            </tr>
+                            <tr>
+                                <td>Nợ</td>
+                                <td>{{numberWithCommas(filterDataWithCounter(8, 21).debt)}}</td>
+                            </tr>
+                        </table>
+                        <div class="d-flex">
+                            <div class="p-2 mr-auto">
+                                <span v-if="filterDataWithCounter(8, 21).length - filterDataWithCounter(15, 28, true).length > 0" class="badge badge-success">
+                                    Tăng {{filterDataWithCounter(8, 21).length - filterDataWithCounter(15, 28, true).length}}
+                                </span>
+                                <span v-else class="badge badge-danger">
+                                    Giảm {{filterDataWithCounter(8, 21).length - filterDataWithCounter(15, 28, true).length}}
+                                </span>
+                            </div>
+                            <div class="p-2"><button class="btn btn-secondary" @click="bindShowDetail(8, 21)">Xem chi tiết</button></div>
+                        </div>
+                    </div>
+                    <div class="col border alert alert-warning">
+                        <h5>Khẩn trương liên hệ</h5>
+                        <p><i>Đã 3 tuần rồi chưa mua hàng</i></p>
+                        <table class="table">
+                            <tr>
+                                <td>Số khách</td>
+                                <td>{{filterDataWithCounter(22, 49).length}}</td>
+                            </tr>
+                            <tr>
+                                <td>Nợ</td>
+                                <td>{{numberWithCommas(filterDataWithCounter(22, 49).debt)}}</td>
+                            </tr>
+                        </table>
+                        <div class="d-flex">
+                            <div class="p-2 mr-auto">
+                                <span v-if="filterDataWithCounter(22, 49).length - filterDataWithCounter(29, 56, true).length > 0" class="badge badge-success">
+                                    Tăng {{filterDataWithCounter(22, 49).length - filterDataWithCounter(29, 56, true).length}}
+                                </span>
+                                <span v-else class="badge badge-danger">
+                                    Giảm {{filterDataWithCounter(22, 49).length - filterDataWithCounter(29, 56, true).length}}
+                                </span>
+                            </div>
+                            <div class="p-2"><button class="btn btn-secondary" @click="bindShowDetail(22, 49)">Xem chi tiết</button></div>
+                        </div>
+                    </div>
+                    <div class="col border alert alert-danger">
+                        <h5>Đang bỏ đi</h5>
+                        <p><i>Đã 2 tháng chưa mua hàng</i></p>
+                        <table class="table">
+                            <tr>
+                                <td>Số khách</td>
+                                <td>{{filterDataWithCounter(50, 5000).length}}</td>
+                            </tr>
+                            <tr>
+                                <td>Nợ</td>
+                                <td>{{numberWithCommas(filterDataWithCounter(50, 5000).debt)}}</td>
+                            </tr>
+                        </table>
+                        <div class="d-flex">
+                            <div class="p-2 mr-auto">
+                                <span v-if="filterDataWithCounter(50, 5000).length - filterDataWithCounter(57, 5000, true).length > 0" class="badge badge-success">
+                                    Tăng {{filterDataWithCounter(50, 5000).length - filterDataWithCounter(57, 5000, true).length}}
+                                </span>
+                                <span v-else class="badge badge-danger">
+                                    Giảm {{filterDataWithCounter(50, 5000).length - filterDataWithCounter(57, 5000, true).length}}
+                                </span>
+                            </div>
+                            <div class="p-2"><button class="btn btn-secondary" @click="bindShowDetail(50, 5000)">Xem chi tiết</button></div>
+                        </div>
+                    </div>    
+                </div>
+
+                <div class="row">
+                    <h2>Chi tiết</h2>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Tên</th>
+                                <th>Doanh thu</th>
+                                <th>Nợ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="customer in customersTable">
+                                <td>{{customer.name}}</td>
+                                <td>{{numberWithCommas(customer.totalRevenue)}}</td>
+                                <td>{{numberWithCommas(customer.debt)}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script>
+            function getEndDate(d){
+                return new Date(Math.round((new Date(d)).getTime()/86400000)*86400000 + (86400000 - 1)); 
+            }
+            function getStartDate(d){
+                return new Date(Math.round((new Date(d)).getTime()/86400000)*86400000);
+            }
+            var view_app_crm = new Vue({
+                el: "#app-index-crm",
+                data: {
+                    init: true,
+                    // data view
+                    customers: [],
+                    customersTable: [],
+
+                    // handler
+                    bindShowDetail: function(){},
+                    filterDataWithCounter: function(){},
+                },
+                methods: {
+                    draw: function(){
+                        this.init = false;
+                    },
+                    numberWithCommas: function (x) {
+                        return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    }
+                },
+                created: function(){
+
+                }
+            })
+            class ControllerCrm {
+                constructor(view, model){
+                    this.view = view;
+                    this.model = model;
+                    this.model.bindDataChanged(this.onDataChanged);
+                    this.view.bindShowDetail = this.handlerShowDetail;
+                    this.view.filterDataWithCounter = this.model.filterDataWithCounter;
+                }
+                onDataChanged = () => {
+                    this.view.draw();
+                    this.view.customers = this.model.customers;
+                }
+                handlerShowDetail = (f, t) => {
+                    var data = this.view.filterDataWithCounter(f, t);
+                    data.data.sort(function(a, b){
+                        return - a.totalRevenue + b.totalRevenue;
+                    })
+                    this.view.customersTable = data.data;
+                }
+            }
+            class ModelCrm {
+                constructor(){
+                    this.customers = [];
+                    this.invoices = [];
+                    this.invoicesLast7 = [];
+                    var that = this;
+                    $.get("/crm/customers", function(d){
+                        var data = d.filter(function(e){
+                            return e.totalRevenue > 0;
+                        })
+                        that.customers = data;
+                        that.mergeData();
+                        // console.log("CUSTOMER", d);
+                    });
+                    $.get("/crm/invoices", function(d){
+                        that.invoices = d;
+                        that.mergeData();
+                        // console.log("INVOICES");
+                    });
+                }
+                bindDataChanged = (callback)=>{
+                    this.onDataChanged = callback;
+                }
+                mergeData = () => {
+                    if((this.customers.length > 0) && (this.invoices.length > 0)){
+                        var that = this;
+                        var lastDate = (getEndDate((new Date()).getTime() - 7*86400000)).toISOString();
+                        that.invoicesLast7 = that.invoices.filter(function(invoice){
+                            return invoice.purchaseDate <= lastDate;
+                        })
+                        this.customers.forEach(function(customer){
+                            var invoices = that.invoices.filter(function(invoice){
+                                return invoice.customerCode == customer.code;
+                            })
+                            if(invoices.length > 0){
+                                customer.lastBuy = invoices.reduce(function(a, b){
+                                if(a.purchaseDate > b.purchaseDate){
+                                    return {
+                                        purchaseDate: a.purchaseDate
+                                    }
+                                } else {
+                                    return {
+                                        purchaseDate: b.purchaseDate
+                                    }
+                                }
+                            }).purchaseDate;
+                            } else {
+                                customer.lastBuy = (new Date("2019-01-01")).toISOString();
+                            }
+
+                            var invoices7 = that.invoicesLast7.filter(function(invoice){
+                                return invoice.customerCode == customer.code;
+                            })
+                            if(invoices7.length > 0){
+                                customer.lastBuy7 = invoices7.reduce(function(a, b){
+                                if(a.purchaseDate > b.purchaseDate){
+                                    return {
+                                        purchaseDate: a.purchaseDate
+                                    }
+                                } else {
+                                    return {
+                                        purchaseDate: b.purchaseDate
+                                    }
+                                }
+                            }).purchaseDate;
+                            } else {
+                                customer.lastBuy7 = (new Date("2019-01-01")).toISOString();
+                            }
+                        })
+                        this.onDataChanged();
+                    }
+                }
+                filterDataWithDate = (s,e, ld) => {
+                        var a = getStartDate(s);
+                        var b = getEndDate(e);
+                        var temp = "lastBuy";
+                        if(ld == true){
+                            temp = "lastBuy7";
+                        }
+                        console.log(temp);
+                        var customers = this.customers.filter(function(customer){
+                            return (customer[temp] >= a.toISOString()) && (customer[temp] <= b.toISOString());
+                        });
+                        var debt = {
+                            debt: 0
+                        };
+                        // console.log(a, b, customers);
+                        try {
+                            debt = customers.reduce(function(t, e){
+                                return {
+                                    debt: t.debt + e.debt
+                                }
+                            })
+                        } catch (e) {
+
+                        }
+                        return {
+                            length: customers.length,
+                            debt: debt.debt,
+                            data: customers
+                        }
+                }
+                filterDataWithCounter = (from, to, ld) => {
+                    var d = new Date();
+                    return this.filterDataWithDate(d.getTime() - to*86400000, d.getTime() - from*86400000, ld);
+                }
+            }
+            var app_crm_index = new ControllerCrm(view_app_crm, new ModelCrm());
+        </script>
+    </body>
+</html>

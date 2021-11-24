@@ -1,0 +1,102 @@
+<html>
+    <head>
+        <%- include("../header.ejs"); %>
+    </head>
+    <body>
+        <%- include("../menu.ejs"); %>
+        <div class="container-fluid" id="app-check-serial">
+            <div class="p-4">
+                <div class="text-center m-3">
+                    <h3>Kiểm tra hàng DSS</h3>
+                    <input v-model="inpCheck" class="form-control" v-on:keyup.enter="onEnter" placeholder="Nhập mã vào đây và ENTER">
+                </div>
+                <div v-for="serial in serials" :class="checkClass(serial)">
+                    <h5>{{serial.serial}}</h5>
+                    <div v-if="serial.result.length == 7">
+                        <table class="table table-bordered">
+                            <tr>
+                                <td>{{serial.result[2].key}}</td>
+                                <td>{{serial.result[2].value}}</td>
+                            </tr>
+                            <tr>
+                                <td>{{serial.result[5].key}}</td>
+                                <td>{{serial.result[5].value}}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div v-else>
+                        <p>Rất tiếc tìm không ra thông tin :D</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            var view_check_serial = new Vue({
+                el: "#app-check-serial",
+                data: {
+                    serials: [],
+                    inpCheck: "",
+
+                    //handler Enter
+                    onEnter: function(){},
+                },
+                methods: {
+                    checkClass: function(s){
+                        switch(s.result.length){
+                            case 0: {
+                                return "alert alert-warning"
+                            }
+                            case 3: {
+                                return "alert alert-danger"
+                            }
+                            case 7: {
+                                return "alert alert-success"
+                            }
+                        }
+                    }
+                }
+            })
+            class ControllerCheckSerial{
+                constructor(view, model){
+                    this.view = view;
+                    this.model = model;
+                    this.view.onEnter = this.handlerEnterSerach;
+                    this.model.bindUpdateData(this.onUpdateData);
+                }
+                onUpdateData = ()=>{
+                    this.view.serials = this.model.serials;
+                    // this.view.$forceUpdate();
+                }
+                handlerEnterSerach = () => {
+                    this.model.checkSerial(this.view.inpCheck);
+                    this.view.inpCheck = "";
+                }
+            }
+            class ModelCheckSerial{
+                constructor(){
+                    this.serials = [];
+                }
+                bindUpdateData = (callback)=>{
+                    this.onUpdateData = callback;
+                }
+                checkSerial=(serial)=>{
+                    var that = this;
+                    this.serials.push({
+                        serial: serial,
+                        result: []
+                    })
+                    that.onUpdateData();
+                    $.get("/checkSerial?serial="+serial, function(d){
+                        that.serials.forEach(function(e){
+                            if(e.serial == serial){
+                                e.result = d;
+                                that.onUpdateData();
+                            }
+                        })
+                    })
+                }
+            }
+            var app_check_serial = new ControllerCheckSerial(view_check_serial, new ModelCheckSerial());
+        </script>
+    </body>
+</html>

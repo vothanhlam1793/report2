@@ -1,0 +1,87 @@
+<html>
+    <head>
+        <%- include("../header.ejs"); %>
+    </head>
+    <body>
+        <%- include("../menu.ejs"); %>
+        <div class="container-fluid" id="app-detail-customer">
+            <div class="row">
+                <div>
+                    <h1>{{customer.name}}</h1>
+                </div>
+            </div>
+            <div class="">
+                <select v-model="selector" @change="bindSelectInvoice()" class="form-control">
+                    <option v-for="invoice in invoices" :value="invoice.code">{{invoice.code}} - {{invoice.total}}</option>
+                </select>
+                <div>
+                    <p>Total: {{invoice.total}}</p>
+                    <table class="table table-bordered">
+                        <tr v-for="detail in invoice.invoiceDetails">
+                            <td>{{detail.productName}}</td>
+                            <td>{{detail.subTotal}}</td>
+                            <td>{{detail.quantity}}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <script>
+            var view_detail_customer = new Vue({
+                el: "#app-detail-customer",
+                data: {
+                    customer: {},
+                    invoices: [],
+                    invoice: {
+                        invoiceDetails: []
+                    },
+                    selector: "",
+                    bindSelectInvoice: function(){}
+                },
+                methods: {
+
+                }
+            });
+            class ControllerDetailCustomer {
+                constructor(view, model){
+                    this.view = view;
+                    this.model = model;
+                    this.model.bindDataUpdate(this.onDataUpdate);
+                    this.view.bindSelectInvoice = this.handleSelectInvoice;
+                }
+                onDataUpdate = (customer)=>{
+                    this.view.customer = this.model.customer;
+                    this.view.invoices = this.model.invoices;
+                }
+                handleSelectInvoice = ()=>{
+                    this.view.invoice = this.model.getInvoiceWithCode(this.view.selector);
+                }
+            }
+            class ModelDetailCustomer {
+                constructor(){
+                    this.code = "<%= code %>";
+                    this.customer = {};
+                    var that = this;
+                    $.get("/crm/customer?code=" + this.code, function(d){
+                        that.customer = d;
+                        that.onDataUpdate();
+                    });
+                    $.get("/crm/invoice?code=" + this.code, function(d){
+                        that.invoices = d;
+                        that.onDataUpdate();
+                    });
+                }
+                bindDataUpdate = (callback) => {
+                    this.onDataUpdate = callback;
+                }
+                getInvoiceWithCode = (code)=>{
+                    var temp = this.invoices.filter(function(e){
+                        return e.code == code;
+                    });
+                    return temp[0];
+                }
+            }
+            var app_detail_customer = new ControllerDetailCustomer(view_detail_customer, new ModelDetailCustomer());
+        </script>
+    </body>
+</html>

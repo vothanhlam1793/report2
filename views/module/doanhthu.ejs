@@ -1,0 +1,82 @@
+<div id="app-revenue" class="mt-3">
+    <div class="text-center p-2">
+        <h3>DOANH THU HÔM NAY</h3>
+    </div>
+    <div v-if="init">
+        <div>
+            <p>Đang khởi tạo dữ liệu</p>
+        </div>
+    </div>
+    <div v-else class="">
+        <div v-if="isMobile()">
+            <table class="table table-bordered">
+                <tr>
+                    <td colspan="4" class="text-center">
+                        <div>
+                            <div>
+                                <p>{{(new Date()).toISOString().split("T")[0]}}</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-6 text-center">Số đơn</td>
+                    <td class="col-6 text-center">Doanh số</td>
+                </tr>
+                <tr>
+                    <td class="text-center align-middle"><h4>{{invoicesToday.length}}</h4></td>
+                    <td class="text-center align-middle"><h4>{{numberWithCommas(getTotalToday())}}</h4></td>
+                </tr>
+            </table>
+        </div>
+        <div v-else>
+            <table class="table table-bordered">
+                <tr>
+                    <td colspan="4" class="text-center">
+                        <div>
+                            <div>
+                                <p>{{(new Date()).toISOString().split("T")[0]}}</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-3 text-center">Liên lạc hôm qua</td>
+                    <td class="col-3 text-center">Số đơn</td>
+                    <td class="col-3 text-center">Doanh số</td>
+                    <td class="col-3 text-center">Mục tiêu</td>
+                </tr>
+                <tr>
+                    <td>
+                        <table class="table table-bordered">
+                            <tr>
+                                <td colspan="2" class="text-center"><strong>14</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="col-8">Facebook</td>
+                                <td class="col-4 text-center">6</td>
+                            </tr>
+                            <tr>
+                                <td>Zalo</td>
+                                <td class="text-center">6</td>
+                            </tr>
+                            <tr>
+                                <td>Điện thoại</td>
+                                <td class="text-center">0</td>
+                            </tr>
+                            <tr>
+                                <td>Website</td>
+                                <td class="text-center">7</td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td class="text-center align-middle"><h1>{{invoicesToday.length}}</h1></td>
+                    <td class="text-center align-middle"><h4>{{numberWithCommas(getTotalToday())}}</h4></td>
+                    <td class="text-center align-middle"><h4>{{numberWithCommas(target)}}</h4></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div></div>
+</div>
+<script src="/js/module/doanhthu.js"></script>
