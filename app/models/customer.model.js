@@ -10,7 +10,8 @@ module.exports = mongoose => {
             lifetime: String,
             codeKiot: String,
             code: String,
-            notes: Array
+            notes: Array,
+            health: String,
         },
         { timestamps: true }
     );

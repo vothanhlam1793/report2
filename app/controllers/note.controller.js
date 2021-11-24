@@ -3,7 +3,7 @@ const Note = db.notes;
 var nameController = "Note";
 
 function createObj (data) {
-    var objArray = ['customerId', 'content', 'tags', 'type'];
+    var objArray = ['customerId', 'customerCode','content', 'tags', 'type'];
     var a = {};
     objArray.forEach(function(e){
         a[e] = data[e];

@@ -118,14 +118,14 @@
                         <thead>
                             <tr>
                                 <th>Tên</th>
-                                <th>Doanh thu</th>
+                                <th>Mua cuối</th>
                                 <th>Nợ</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="customer in customersTable">
                                 <td>{{customer.name}}</td>
-                                <td>{{numberWithCommas(customer.totalRevenue)}}</td>
+                                <td>{{customer.lastBuy.split("T")[0]}}</td>
                                 <td>{{numberWithCommas(customer.debt)}}</td>
                             </tr>
                         </tbody>
@@ -179,7 +179,12 @@
                 handlerShowDetail = (f, t) => {
                     var data = this.view.filterDataWithCounter(f, t);
                     data.data.sort(function(a, b){
-                        return - a.totalRevenue + b.totalRevenue;
+                        if(a.lastBuy > b.lastBuy){
+                            return 1;
+                        } else {
+                            return -1;
+                        }
+                        // return - a.totalRevenue + b.totalRevenue;
                     })
                     this.view.customersTable = data.data;
                 }

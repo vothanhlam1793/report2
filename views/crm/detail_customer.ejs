@@ -6,15 +6,27 @@
         <%- include("../menu.ejs"); %>
         <div class="container-fluid" id="app-detail-customer">
             <div class="row">
-                <div>
+                <div class="p-3">
                     <h1>{{customer.name}}</h1>
                 </div>
             </div>
-            <div class="">
+            <div class="row">
+                <div class="col">
+                    <h4>Tags</h4>
+                    <p>
+                        <span 
+                            class="badge badge-secondary mr-2"
+                            v-for="tag in tags"
+                        >{{tag}}</span>
+                    </p>
+                    <input class="form-control" v-model="inpTag" v-on:keyup.enter="bindEnterTag">
+                </div>
+            </div>
+            <div class="row p-3" style="display: none;">
                 <select v-model="selector" @change="bindSelectInvoice()" class="form-control">
                     <option v-for="invoice in invoices" :value="invoice.code">{{invoice.code}} - {{invoice.total}}</option>
                 </select>
-                <div>
+                <div class="">
                     <p>Total: {{invoice.total}}</p>
                     <table class="table table-bordered">
                         <tr v-for="detail in invoice.invoiceDetails">
@@ -36,7 +48,10 @@
                         invoiceDetails: []
                     },
                     selector: "",
-                    bindSelectInvoice: function(){}
+                    bindSelectInvoice: function(){},
+                    bindEnterTag: function(){},
+                    tags: [],
+                    inpTag: ""
                 },
                 methods: {
 
@@ -48,6 +63,7 @@
                     this.model = model;
                     this.model.bindDataUpdate(this.onDataUpdate);
                     this.view.bindSelectInvoice = this.handleSelectInvoice;
+                    this.view.bindEnterTag = this.handleEnterTag;
                 }
                 onDataUpdate = (customer)=>{
                     this.view.customer = this.model.customer;
@@ -55,6 +71,16 @@
                 }
                 handleSelectInvoice = ()=>{
                     this.view.invoice = this.model.getInvoiceWithCode(this.view.selector);
+                }
+                handleEnterTag = () => {
+                    var that = this;
+                    if((this.view.inpTag == "")||(this.view.tags.findIndex(function(e){return e == that.view.inpTag}) > -1)){
+                        
+                    } else {
+                        this.view.tags.push(this.view.inpTag);
+                    }
+                    this.view.inpTag = "";
+                    return;
                 }
             }
             class ModelDetailCustomer {

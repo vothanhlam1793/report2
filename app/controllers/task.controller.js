@@ -3,7 +3,7 @@ const Model = db.tasks;
 var nameController = "Task";
 
 function createObj (data) {
-    var objArray = ['deadline', 'description', 'staff', 'result'];
+    var objArray = ['deadline', 'description', 'staff', 'result', 'type', 'status'];
     var a = {};
     objArray.forEach(function(e){
         a[e] = data[e];

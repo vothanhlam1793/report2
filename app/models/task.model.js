@@ -4,7 +4,9 @@ module.exports = mongoose => {
             deadline: Date,
             description: String,
             staff: String,
-            result: String
+            result: String,
+            type: String,
+            status: String
         },
         { timestamps: true }
     );

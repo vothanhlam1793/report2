@@ -4,7 +4,7 @@ const Customer = db.customers;
 var nameController = "Note";
 
 function createObj (data) {
-    var objArray = ['name', 'phoneNumber', 'description', 'type', 'tags', 'links', 'code', 'codeKiot', "lifetime", "notes"];
+    var objArray = ['name', 'phoneNumber', 'description', 'type', 'tags', 'links', 'code', 'codeKiot', "lifetime", "notes", 'health'];
     var a = {};
     objArray.forEach(function(e){
         a[e] = data[e];
