@@ -40,6 +40,7 @@ app.use('/', indexRouter);
 app.use('/crm', crmRouter);
 app.use('/users', usersRouter);
 app.use("/customer", customerRouter);
+app.use("/task", require("./routes/task"));
 require("./app/routes/task.route")(app);
 require("./app/routes/customer.route")(app);
 require("./app/routes/note.route")(app);

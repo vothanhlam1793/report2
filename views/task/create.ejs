@@ -1,4 +1,106 @@
-<form method="POST" accept="/api/tasks">
-    <input name="description">
-    <input type="submit" value="OK">
-</form>
+<div id="create-task" class="p-4">
+    <div class="form-group">
+        <label>Loại công việc</label>
+        <select class="form-control" v-model="type">
+            <option value="CUSTOMER_SERVICE">Chăm sóc khách hàng</option>
+            <option value="DAILY">Việc hàng ngày</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Mô tả</label>
+        <textarea class="form-control" v-model="description"></textarea>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label>Ngày hết hạn</label>
+                <input class="form-control" type="date" v-model="deadline">
+            </div>
+        </div>
+        <div class="col">
+            <div class="form-group">
+                <label>Lặp lại</label>
+                <select class="form-control">
+                    <option>Hàng ngày</option>
+                    <option>Hàng tuần</option>
+                    <option>Hàng tháng</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Người thực hiện</label>
+        <select class="form-control" v-model="staff">
+            <option>Lâm</option>
+            <option>Huy</option>
+            <option>Dinh</option>
+            <option>Nhiên</option>
+            <option>Minh</option>
+            <option>Bảo</option>
+        </select>
+    </div>
+    <div class="text-center">
+        <button class="btn btn-success" @click="btnCreate">Tạo</button>
+    </div>
+</div>
+<script>
+    var view_create_task = new Vue({
+        el: "#create-task",
+        data: {
+            deadline: (new Date((new Date()).getTime() + 2*86400000)).toISOString().split("T")[0],
+            description: "",
+            staff: "",
+            type: "",
+            btnCreate: function(){},
+        },
+        methods: {
+
+        }
+    })
+
+    class ControllerCreateTask{
+        constructor(view, model){
+            this.view = view;
+            this.model = model;
+            this.view.btnCreate = this.handleCreate;
+
+        }
+        onUpdateData = ()=>{
+
+        }
+        handleCreate = () => {
+            var obj = {
+                deadline: this.view.deadline,
+                description: this.view.description,
+                staff: this.view.staff,
+                type: this.view.type
+            };
+            var that = this;
+            this.model.createTask(obj, function(){
+                that.view.deadline = (new Date((new Date()).getTime() + 2*86400000)).toISOString().split("T")[0];
+                that.view.description = "";
+                that.view.staff = "";
+                that.view.type = "";
+            });
+        }
+    }
+
+    class ModelCreateTask{
+        constructor(){
+            this.onUpdateData = function(){}
+        }
+        createTask=(obj,cb)=>{
+            var that = this;
+            var t = new Task();
+            t.save(obj, {
+                success: function(){
+                    that.onUpdateData();
+                    if(cb){
+                        cb(t)
+                    }
+                }
+            })
+        }
+    }
+    app_create_task = new ControllerCreateTask(view_create_task, new ModelCreateTask());
+</script>

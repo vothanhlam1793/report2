@@ -1,0 +1,22 @@
+<html>
+    <head>
+        <%- include('../header.ejs', {title: title}) %>
+    </head>
+    <body class="container-fluid">
+        <div>
+            <%- include("../menu.ejs") %>
+        </div>
+        <div class="row">
+            <div class="col-3 border">
+                <%- include("nav.ejs"); %>
+            </div>
+            <div class="col-9 border">
+                <% if(page == "CREATE"){ %>
+                    <%- include("create.ejs") %>
+                <% } else { %>
+                    <%- include("show.ejs") %>
+                <% } %>
+            </div>
+        </div>
+    </body>
+</html>

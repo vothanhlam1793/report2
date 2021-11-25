@@ -6,7 +6,9 @@ module.exports = mongoose => {
             staff: String,
             result: String,
             type: String,
-            status: String
+            status: String,
+            repeat: String,
+            repeatObject: Object
         },
         { timestamps: true }
     );

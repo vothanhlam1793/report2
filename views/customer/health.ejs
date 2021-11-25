@@ -1,0 +1,20 @@
+<div id="health-module">
+    <div>
+        <ul>
+            <li>Sức khỏe: <%= customer.health || "Chưa cập nhật" %></li>
+            <li>Doanh số: <%= customer.total || "Chưa cập nhật" %></li>
+            <li>Công nợ: <%= customer.debt || "Chưa cập nhật" %></li>
+        </ul>
+    </div>
+</div>
+<script>
+    var view_healthy = new Vue({
+        el: "#health-module",
+        data: {
+
+        },
+        methods: {
+
+        }
+    })
+</script>

@@ -25,8 +25,12 @@
 
             <div class="row">
                 <div class="form-group">
-                    <input class="from-control" placeholder="Ghi chú khách hàng">
-                    <button class="btn btn-success">Lưu</button>
+                    <input class="from-control" placeholder="Ghi chú khách hàng" v-model="inpNote">
+                    <button class="btn btn-success" @click="bindBtnNote">Lưu</button>
+                </div>
+                <div v-for="note in getNotes().models">
+                    <p>{{note.get('content')}}</p>
+                    <p>{{note.get('createdAt')}}</p>
                 </div>
             </div>
         </div>
@@ -35,10 +39,13 @@
                 el: "#app-detail-customer",
                 data: {
                     inpTag: "",
+                    inpNote: "",
                     getName: function(){},
                     getTags: function(){return []},
+                    getNotes: function(){},
                     getNotes: function(){return []},
                     bindEnterTag: function(){},
+                    bindBtnNote: function(){}
                 },
                 methods: {
 
@@ -50,6 +57,7 @@
                     console.log(this);
                     this.id = id;
                     var that = this;
+                    this.onUpdateData = function(){};
                     $.get("/api/notes?customerId=" + this.id, function(data){
                         data.forEach(function(e){
                             that.add({id: e.id});
@@ -67,6 +75,7 @@
             class ControllerDetailCustomer{
                 constructor(view, customer, kiotcustomer){
                     var that = this;
+                    this.customerId = "<%= customerId %>";
                     this.notes = new FactoryNotes("<%= customerId %>");
                     this.view = view;
                     this.customer = customer;
@@ -78,8 +87,11 @@
                         }
                     });
                     this.kiotcustomer.bindUpdateData(this.onUpdateData);
+                    this.notes.bindUpdateData(this.onUpdateData);
                     this.view.getName = this.getName;
+                    this.view.getNotes = this.getNotes;
                     this.view.bindEnterTag = this.handleEnterTag;
+                    this.view.bindBtnNote = this.handleBtnNote;
                 }
                 onUpdateData = ()=>{
                     this.view.$forceUpdate();
@@ -89,6 +101,9 @@
                 }
                 getTags = ()=>{
                     return  this.customer.get("tags");
+                }
+                getNotes = ()=>{
+                    return this.notes;
                 }
                 handleEnterTag = ()=>{
                     var that = this;
@@ -100,6 +115,21 @@
                     this.view.inpTag = "";
                     this.customer.save();
                     return;
+                }
+                handleBtnNote = () => {
+                    var that = this;
+                    var note = new Note();
+                    note.save({
+                        content: this.view.inpNote,
+                        customerId: this.customerId,
+                        customerCode: "<%= code %>",
+                        type: "NORMAL"
+                    }, {
+                        success: function(){
+                            that.notes.add(note);
+                            that.onUpdateData();
+                        }
+                    })
                 }
             }
             var app_detail_customer = new ControllerDetailCustomer(view_detail_customer, new Customer({id: "<%= customerId %>"}), new CustomerKiot("<%= code %>"))

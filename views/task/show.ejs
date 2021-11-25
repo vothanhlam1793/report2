@@ -1,0 +1,74 @@
+<div class="" id="show-task">
+    <div class="m-5">
+
+    </div>
+    <div class="">
+        <table class="table table-bordered">
+            <tr v-for="task in tasks">
+                <td>{{task.deadline}}</td>
+                <td>{{task.description}}</td>
+                <td>{{task.staff}}</td>
+                <td><button class="btn btn-danger" @click="btnDeleteTask(task.id)">x</button></td>
+            </tr>
+        </table>
+    </div>
+</div>
+<script>
+    var view_show_task = new Vue({
+        el: "#show-task",
+        data: {
+            tasks: [],
+            btnDeleteTask: function(){},
+        },
+        methods: {
+            // Cap nhat giao dien
+            drawTable: function(tasks){
+                this.tasks = tasks;
+            }
+        }
+    })
+    class ControllerShowTask{
+        constructor(view, model){
+            this.view = view;
+            this.model = model;
+            this.model.onUpdateData = this.onUpdateData;
+            this.view.btnDeleteTask = this.handleDeleteTask;
+        }
+        // Cap nhat giao dien
+        onUpdateData = () => {
+            this.view.drawTable(this.model.tasks);
+        }
+        // Xu ly nut
+        handleDeleteTask = (id) => {
+            this.model.deleteTask(id);
+        }
+    }
+
+    class ModelShowTask{
+        constructor(){
+            var that = this;
+            this.tasks = [];
+            this.onUpdateData = function(){}
+            this.fetchData();
+        }
+        // Cap nhat data
+        fetchData = () => {
+            var that = this;
+            $.get("/api/tasks", function(data){
+                that.tasks = data;
+                that.onUpdateData();
+            });
+        }
+        // Xoa mot task
+        deleteTask = (id)=>{
+            var that = this;
+            var t = new Task({id: id});
+            t.destroy({
+                success: function(){
+                    that.fetchData();
+                }
+            })
+        }
+    }
+    var app_show_task = new ControllerShowTask(view_show_task, new ModelShowTask());
+</script>
