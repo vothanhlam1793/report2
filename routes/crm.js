@@ -25,10 +25,5 @@ router.get("/invoice", async (req, res)=>{
     var customer = await kiot.getFull("https://public.kiotapi.com/invoices?customerCode=" + req.query.code);
     res.send(customer);
 })
-kiot.getFullCustomer(true);
-kiot.getFullInvoice(true);
-setInterval(function(){
-    kiot.getFullCustomer(true);
-    kiot.getFullInvoice(true);
-}, 3*60000);
+
 module.exports = router;

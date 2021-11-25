@@ -29,7 +29,8 @@ exports.create = (req, res) => {
 
 // Retrieve all Tutorials from the database.
 exports.findAll = (req, res) => {
-    Note.find({}).then(data=>{
+    console.log(req.query);
+    Note.find(req.query).then(data=>{
         res.send(data);
     }).catch(e=>{
         res.status(500).send({

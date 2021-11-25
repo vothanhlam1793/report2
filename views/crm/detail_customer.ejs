@@ -7,7 +7,7 @@
         <div class="container-fluid" id="app-detail-customer">
             <div class="row">
                 <div class="p-3">
-                    <h1>{{customer.name}}</h1>
+                    <h1>{{getName()}}</h1>
                 </div>
             </div>
             <div class="row">
@@ -15,26 +15,18 @@
                     <h4>Tags</h4>
                     <p>
                         <span 
-                            class="badge badge-secondary mr-2"
-                            v-for="tag in tags"
+                            class="badge badge-secondary mr-2 p-1"
+                            v-for="tag in getTags()"
                         >{{tag}}</span>
                     </p>
                     <input class="form-control" v-model="inpTag" v-on:keyup.enter="bindEnterTag">
                 </div>
             </div>
-            <div class="row p-3" style="display: none;">
-                <select v-model="selector" @change="bindSelectInvoice()" class="form-control">
-                    <option v-for="invoice in invoices" :value="invoice.code">{{invoice.code}} - {{invoice.total}}</option>
-                </select>
-                <div class="">
-                    <p>Total: {{invoice.total}}</p>
-                    <table class="table table-bordered">
-                        <tr v-for="detail in invoice.invoiceDetails">
-                            <td>{{detail.productName}}</td>
-                            <td>{{detail.subTotal}}</td>
-                            <td>{{detail.quantity}}</td>
-                        </tr>
-                    </table>
+
+            <div class="row">
+                <div class="form-group">
+                    <input class="from-control" placeholder="Ghi chú khách hàng">
+                    <button class="btn btn-success">Lưu</button>
                 </div>
             </div>
         </div>
@@ -42,72 +34,75 @@
             var view_detail_customer = new Vue({
                 el: "#app-detail-customer",
                 data: {
-                    customer: {},
-                    invoices: [],
-                    invoice: {
-                        invoiceDetails: []
-                    },
-                    selector: "",
-                    bindSelectInvoice: function(){},
+                    inpTag: "",
+                    getName: function(){},
+                    getTags: function(){return []},
+                    getNotes: function(){return []},
                     bindEnterTag: function(){},
-                    tags: [],
-                    inpTag: ""
                 },
                 methods: {
 
                 }
             });
-            class ControllerDetailCustomer {
-                constructor(view, model){
+            class FactoryNotes extends Notes {
+                constructor(id){
+                    super();
+                    console.log(this);
+                    this.id = id;
+                    var that = this;
+                    $.get("/api/notes?customerId=" + this.id, function(data){
+                        data.forEach(function(e){
+                            that.add({id: e.id});
+                        })
+                        that.models.forEach(function(e){
+                            e.fetch();
+                        })
+                        that.onUpdateData();
+                    });
+                }
+                bindUpdateData = (callback)=>{
+                    this.onUpdateData = callback;
+                }
+            }
+            class ControllerDetailCustomer{
+                constructor(view, customer, kiotcustomer){
+                    var that = this;
+                    this.notes = new FactoryNotes("<%= customerId %>");
                     this.view = view;
-                    this.model = model;
-                    this.model.bindDataUpdate(this.onDataUpdate);
-                    this.view.bindSelectInvoice = this.handleSelectInvoice;
+                    this.customer = customer;
+                    this.kiotcustomer = kiotcustomer;
+                    this.customer.fetch({
+                        success: ()=>{
+                            that.onUpdateData();
+                            that.view.getTags = that.getTags;
+                        }
+                    });
+                    this.kiotcustomer.bindUpdateData(this.onUpdateData);
+                    this.view.getName = this.getName;
                     this.view.bindEnterTag = this.handleEnterTag;
                 }
-                onDataUpdate = (customer)=>{
-                    this.view.customer = this.model.customer;
-                    this.view.invoices = this.model.invoices;
+                onUpdateData = ()=>{
+                    this.view.$forceUpdate();
                 }
-                handleSelectInvoice = ()=>{
-                    this.view.invoice = this.model.getInvoiceWithCode(this.view.selector);
+                getName = ()=>{
+                    return this.kiotcustomer.name;
                 }
-                handleEnterTag = () => {
+                getTags = ()=>{
+                    return  this.customer.get("tags");
+                }
+                handleEnterTag = ()=>{
                     var that = this;
-                    if((this.view.inpTag == "")||(this.view.tags.findIndex(function(e){return e == that.view.inpTag}) > -1)){
+                    if((this.view.inpTag == "")||(this.customer.attributes.tags.findIndex(function(e){return e == that.view.inpTag}) > -1)){
                         
                     } else {
-                        this.view.tags.push(this.view.inpTag);
+                        this.customer.attributes.tags.push(this.view.inpTag);
                     }
                     this.view.inpTag = "";
+                    this.customer.save();
                     return;
                 }
             }
-            class ModelDetailCustomer {
-                constructor(){
-                    this.code = "<%= code %>";
-                    this.customer = {};
-                    var that = this;
-                    $.get("/crm/customer?code=" + this.code, function(d){
-                        that.customer = d;
-                        that.onDataUpdate();
-                    });
-                    $.get("/crm/invoice?code=" + this.code, function(d){
-                        that.invoices = d;
-                        that.onDataUpdate();
-                    });
-                }
-                bindDataUpdate = (callback) => {
-                    this.onDataUpdate = callback;
-                }
-                getInvoiceWithCode = (code)=>{
-                    var temp = this.invoices.filter(function(e){
-                        return e.code == code;
-                    });
-                    return temp[0];
-                }
-            }
-            var app_detail_customer = new ControllerDetailCustomer(view_detail_customer, new ModelDetailCustomer());
+            var app_detail_customer = new ControllerDetailCustomer(view_detail_customer, new Customer({id: "<%= customerId %>"}), new CustomerKiot("<%= code %>"))
         </script>
     </body>
 </html>

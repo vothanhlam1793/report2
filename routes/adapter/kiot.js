@@ -84,7 +84,12 @@ async function getFullInvoice(pNew) {
     }
     return invoices;
 }
-
+getFullCustomer(true);
+getFullInvoice(true);
+setInterval(function(){
+    getFullCustomer(true);
+    getFullInvoice(true);
+}, 10*60000);
 module.exports.getKiotViet = getKiotViet;
 module.exports.getFull = getFull;
 module.exports.getFullCustomer = getFullCustomer;
