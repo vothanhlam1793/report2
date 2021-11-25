@@ -1,6 +1,8 @@
 const puppeteer = require('puppeteer');
 async function getSerial(Sertial){
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        headless: true
+    });
     const page = await browser.newPage();
     await page.goto('https://dahua.vn/bao-hanh.html');
     const result = await page.evaluate(async (serial)=>{
