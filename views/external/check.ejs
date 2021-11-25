@@ -25,7 +25,7 @@
                         </table>
                     </div>
                     <div v-else>
-                        <p>Rất tiếc tìm không ra thông tin :D</p>
+                        <p>{{serial.status}}</p>
                     </div>
                 </div>
             </div>
@@ -83,6 +83,7 @@
                     var that = this;
                     this.serials.push({
                         serial: serial,
+                        status: "Đợi xíu :D - Đang tìm kiếm ... ",
                         result: []
                     })
                     that.onUpdateData();
@@ -90,6 +91,9 @@
                         that.serials.forEach(function(e){
                             if(e.serial == serial){
                                 e.result = d;
+                                if(e.result.length == 3){
+                                    e.status = "Thông tin không tìm thấy";
+                                }
                                 that.onUpdateData();
                             }
                         })
