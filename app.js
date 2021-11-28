@@ -45,6 +45,7 @@ require("./app/routes/task.route")(app);
 require("./app/routes/customer.route")(app);
 require("./app/routes/note.route")(app);
 require("./app/routes/kiot.router")(app);
+require("./app/routes/customer_creta_route")(app);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

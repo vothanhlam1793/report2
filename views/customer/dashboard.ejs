@@ -1,0 +1,91 @@
+<div id="dashboard-customer">
+    <h1 class="m-3">Tổng quát</h1>
+    <div class="border border-success rounded p-3">
+        <h3>Tình trạng sức khỏe</h3>
+        <div class="row">
+            <div class="col">
+                <div class="text-center">
+                    <h5>Tốt</h5>
+                </div>
+                <div>
+                    <p>{{getHealth('GOOD').length}}</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="text-center">
+                    <h5>Không tốt</h5>
+                </div>
+                <div>
+                    <p>{{getHealth('NOT_GOOD').length}}</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="text-center">
+                    <h5>Bệnh</h5>
+                </div>
+                <div>
+                    <p>{{getHealth('SICK').length}}</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="text-center">
+                    <h5>Không xác định</h5>
+                </div>
+                <div>
+                    <p>{{getHealth().length}}</p>
+                    <a href="/">Xem chi tiet</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var view_dashboard = new Vue({
+        el: "#dashboard-customer",
+        mixins: [_support_vue],
+        data: {
+            customers: [],
+        },
+        methods: {
+            getHealth: function(){return []},
+        }
+    })
+
+    class ModelDashboard {
+        constructor(){
+            this.customers = [];
+            this.onUpdateData = function(){};
+            this.initData();
+        }
+        initData = () => {
+            var that = this;
+            $.get("/creta/customer", function(data){
+                that.customers = data;
+                that.onUpdateData();
+            })
+        }
+        getHealth = (state) => {
+            // Tim nhung khach hang co cung state
+            var result = this.customers.filter(function(customer){
+                return customer.origin.health == state;
+            });
+            return result;
+        }
+    }
+
+    class ControllerDashboard {
+        constructor(view, model){
+            this.view = view;
+            this.model = model;
+            this.model.onUpdateData = this.onUpdateData;
+            this.view.getHealth = this.handleGetHealth;
+        }
+        onUpdateData = () => {
+            this.view.$forceUpdate();
+        }
+        handleGetHealth = (state) => {
+            return this.model.getHealth(state);
+        }
+    }
+    var app_dashboard = new ControllerDashboard(view_dashboard, new ModelDashboard());
+</script>

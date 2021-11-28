@@ -1,7 +1,7 @@
 <div class="mt-5">
     <h1><%= customer.name %></h1>
     <div class="list-group">
-        <a href="/customer" class="list-group-item list-group-item-action">Tất cả khách</a>
+        <a href="/customer" class="list-group-item list-group-item-action">Tổng quát</a>
         <% if(customer.code != ''){ %>
             <a href="/customer/<%= customer.codeKiot||customer.code %>/info" class="list-group-item list-group-item-action">Thông tin</a>
             <a href="/customer/<%= customer.codeKiot||customer.code %>/health" class="list-group-item list-group-item-action">Theo dõi</a>

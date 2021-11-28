@@ -76,11 +76,19 @@ exports.getHealth = function(req, res){
 }
 
 exports.getAll = function(req, res){
-    res.render("customer/index", {
-        mainPage: "ALL",
-        customer: {
-            name: "Tất cả khách",
-            code: ""
+    // res.send("OK");
+    res.render("customer/template", {
+        nav: {
+            page: "dashboard/nav.ejs",
+            argv: {
+
+            }
+        },
+        main: {
+            page: "dashboard/index.ejs",
+            argv: {
+
+            }
         }
     });
 }

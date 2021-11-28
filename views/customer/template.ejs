@@ -1,0 +1,18 @@
+<html>
+    <head>
+        <%- include('../header.ejs', {title: "Chưa có tiêu đề"}) %>
+    </head>
+    <body class="container-fluid">
+        <div>
+            <%- include("../menu.ejs") %>
+        </div>
+        <div class="row">
+            <div class="col-3 border">
+                <%- include(nav.page, {argv: nav.argv}) %>
+            </div>
+            <div class="col-9 border">
+                <%- include(main.page, {argv: main.argv}) %>
+            </div>
+        </div>
+    </body>
+</html>
