@@ -1,6 +1,6 @@
 <!-- Cai nay la cho Minh phat trien -->
-<div id="app-warranty">
-    <h1>BẢO HÀNH</h1>
+<div id="app-warranty" class="container">
+    <h3>BẢO HÀNH</h3>
     <table class="table table-bordered">
         <thead>
             <th>Ngày</th>
@@ -14,7 +14,7 @@
             <th>Tổng</th>
         </thead>
         <tbody>
-            <tr v-for="warranty in warrantiesBetweenDates">
+            <tr v-for="warranty in warrantiesBetweenDates.slice().reverse()">
                 <td>{{ moment(warranty.NGAY).format("DD-MM") }}</td>
                 <td>{{ warranty.TIEP_NHAN }}</td>
                 <td>{{ warranty.DANG_SUA_CHUA }}</td>
@@ -59,8 +59,8 @@
                     sheetName: "BAOHANH"
                 }, success: function(data){
                     that.warranties = data;
-                    that.onUpdateData();
                     that.initWarrantiesLast7Days();
+                    that.onUpdateData();                   
                 }
             });
         }
@@ -105,7 +105,7 @@
             var lastDay = moment().format("YYYY-MM-DD");
             var firstDay = moment().subtract(7, "days").format("YYYY-MM-DD");
             this.warrantiesBetweenDates = this.getWarrantiesBetweenDates(firstDay, lastDay);
-            this.onUpdateData();
+            // this.onUpdateData();
         }
     }
 
@@ -134,5 +134,5 @@
         }
     })
 
-    var appController = new ControllerWarranty(app_warranty, new ModelWarranty());
+    var appWarrantyController = new ControllerWarranty(app_warranty, new ModelWarranty());
 </script>

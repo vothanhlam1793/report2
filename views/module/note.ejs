@@ -1,0 +1,100 @@
+<div id="app-note" class="container">
+    <h1>NOTE</h1>
+    <table class="table table-bordered">
+        <thead>
+            <th>Ngày</th>
+            <th>Nội dung</th>
+            <th>Mức độ</th>
+            <th>Nhóm</th>
+            <th>Trạng thái</th>
+        </thead>
+        <tbody>
+            <tr v-for="note in activeNotes">
+                <td>{{ moment(note.DATE).format("DD-MM") }}</td>
+                <td>{{ note.NOI_DUNG }}</td>
+                <td>{{ note.MUC_DO }}</td>
+                <td>{{ note.NHOM }}</td>
+                <td>{{ note.TRANG_THAI }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+<script>
+    // $.ajax({
+    //     type: "POST",
+    //     url: "/api/sheet/fetch",
+    //     data: {
+    //         url: "https://script.google.com/macros/s/AKfycbxSkbYSKouYGETxz3Jfd9MRLl8g_ljja6yoZznA62vxv3WpyN90xj38HIOPhhiHBPcNZw/exec",
+    //         sheetName: "NOTE"
+    //     }, success: function(data){
+    //         console.log(data);
+    //     }
+    // })
+
+    class ModelNote {
+        constructor(){
+            this.notes = [];
+            this.activeNotes = [];
+            this.initNotes();
+        }
+        initNotes = () => {
+            var that = this;
+            $.ajax({
+                type: "POST",
+                url: "/api/sheet/fetch",
+                data: {
+                    url: "https://script.google.com/macros/s/AKfycbxSkbYSKouYGETxz3Jfd9MRLl8g_ljja6yoZznA62vxv3WpyN90xj38HIOPhhiHBPcNZw/exec",
+                    sheetName: "NOTE"
+                }, success: function(data){
+                    that.notes = data;
+                    var existNotes = that.getExistNotes(data);
+                    console.log("exist: ", existNotes)
+                    var activeNotes = that.getActiveNotes(existNotes);
+                    that.activeNotes = activeNotes;
+                    that.onUpdateData();
+                }
+            })
+        }
+        getExistNotes = (notes) => {
+            var result = [];
+            notes.forEach(note => {
+                if(note.NOI_DUNG !== ''){
+                    result.push(note);
+                }
+            })
+            return result;
+        }
+        getActiveNotes = (notes) => {
+            var result = [];
+            notes.forEach(note => {
+                if(note.TRANG_THAI == 0){
+                    result.push(note);
+                }
+            })
+            return result;
+        }
+    }
+
+    class ControllerNote{
+        constructor(view, model){
+            this.view = view;
+            this.model = model;
+
+            this.model.onUpdateData =this.onUpdateData;
+        }
+        onUpdateData = () => {
+            // this.view.notes = this.model.notes;
+            this.view.activeNotes = this.model.activeNotes;
+        }
+    }
+
+    var app_note = new Vue({
+        el : "#app-note",
+        data: {
+            activeNotes : []            
+        }
+    })
+
+    var appNoteController = new ControllerNote(app_note, new ModelNote());
+</script>
