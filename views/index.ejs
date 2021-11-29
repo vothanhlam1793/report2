@@ -5,7 +5,12 @@
     <body>
         <%- include("menu.ejs"); %>
         <div class="container-fluid">
-            <%- include("module/doanhthu", {data: sales}) %>
+            <div>
+                <%- include("module/doanhthu", {data: sales}) %>
+            </div>
+            <div>
+                <%- include("module/baohanh") %>
+            </div>
         </div>
     </body>
 </html>

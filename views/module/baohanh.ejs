@@ -1,0 +1,16 @@
+<!-- Cai nay la cho Minh phat trien -->
+<div id="app-warranty">
+    <h1>Bao hanh</h1>
+</div>
+<script>
+    $.ajax({
+        type: "POST",
+        url: "/api/sheet/fetch",
+        data: {
+            url: "https://script.google.com/macros/s/AKfycbxSkbYSKouYGETxz3Jfd9MRLl8g_ljja6yoZznA62vxv3WpyN90xj38HIOPhhiHBPcNZw/exec",
+            sheetName: "CUOCGOI"
+        }, success: function(data){
+            console.log(data);
+        }
+    })
+</script>
