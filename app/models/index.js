@@ -11,4 +11,5 @@ db.notes = require("./note.model")(mongoose);
 db.customers = require("./customer.model")(mongoose);
 db.campaigns = require("./campaign.model")(mongoose);
 db.tasks = require("./task.model")(mongoose);
+db.phieus = require("./phieu.model")(mongoose);
 module.exports = db;
