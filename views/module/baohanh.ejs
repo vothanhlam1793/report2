@@ -1,16 +1,138 @@
 <!-- Cai nay la cho Minh phat trien -->
-<div id="app-warranty">
-    <h1>Bao hanh</h1>
+<div id="app-warranty" class="container">
+    <h3>BẢO HÀNH</h3>
+    <table class="table table-bordered">
+        <thead>
+            <th>Ngày</th>
+            <th>Tiếp nhận</th>
+            <th>Đang sửa chữa</th>
+            <th>Đã nhận</th>
+            <th>NCC</th>
+            <th>Sẵn sàng</th>
+            <th>Sẵn sàng xong</th>
+            <th>Hoàn thành</th>
+            <th>Tổng</th>
+        </thead>
+        <tbody>
+            <tr v-for="warranty in warrantiesBetweenDates.slice().reverse()">
+                <td>{{ moment(warranty.NGAY).format("DD-MM") }}</td>
+                <td>{{ warranty.TIEP_NHAN }}</td>
+                <td>{{ warranty.DANG_SUA_CHUA }}</td>
+                <td>{{ warranty.DA_NHAN }}</td>
+                <td>{{ warranty.NHA_CUNG_CAP }}</td>
+                <td>{{ warranty.SAN_SANG }}</td>
+                <td>{{ warranty.SAN_SANG_DONE }}</td>
+                <td>{{ warranty.HOAN_THANH }}</td>
+                <td>{{ warranty.TONG }}</td>
+            </tr>
+        </tbody>
+    </table>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
 <script>
-    $.ajax({
-        type: "POST",
-        url: "/api/sheet/fetch",
+    // $.ajax({
+    //     type: "POST",
+    //     url: "/api/sheet/fetch",
+    //     data: {
+    //         url: "https://script.google.com/macros/s/AKfycbxSkbYSKouYGETxz3Jfd9MRLl8g_ljja6yoZznA62vxv3WpyN90xj38HIOPhhiHBPcNZw/exec",
+    //         sheetName: "BAOHANH"
+    //     }, success: function(data){
+    //         console.log(data);
+    //     }
+    // })
+    
+
+    class ModelWarranty{
+        constructor(){
+            this.warranties = [];
+            this.warrantiesBetweenDates = [];
+            this.onUpdateData = function(){};
+            this.initWarranties();
+        }
+        initWarranties = () =>{
+            var that = this;
+            $.ajax({
+                type: "POST",
+                url: "/api/sheet/fetch",
+                data: {
+                    url: "https://script.google.com/macros/s/AKfycbxSkbYSKouYGETxz3Jfd9MRLl8g_ljja6yoZznA62vxv3WpyN90xj38HIOPhhiHBPcNZw/exec",
+                    sheetName: "BAOHANH"
+                }, success: function(data){
+                    that.warranties = data;
+                    that.initWarrantiesLast7Days();
+                    that.onUpdateData();                   
+                }
+            });
+        }
+        getDaysBetweenDates = (firstDate, lastDate) => {
+            var result = [];
+            try {
+                var firstDay = moment(firstDate);
+                var lastDay = moment(lastDate);
+                var tempDay = firstDay;
+                if(firstDay > lastDay){
+
+                } else {
+                    var count = 0;
+                    while (tempDay <= lastDay){
+                        result.push(moment(tempDay).format("YYYY-MM-DD"))
+                        tempDay = moment(tempDay).add(1, "days");
+                    }                    
+                }
+            } catch(err){
+                console.log(err);
+            }
+            return result;
+        }
+        getWarrantiesByDays = (arrayOfDays) =>  {
+            var result = [];
+            var that = this;
+            arrayOfDays.forEach( (day) => {
+                that.warranties.forEach( (warranty) => {
+                    if(moment(warranty.NGAY).format("YYYY-MM-DD") == moment(day).format("YYYY-MM-DD")){
+                        result.push(warranty);
+                    }
+                } )
+            });
+            return result;
+        }
+        getWarrantiesBetweenDates = (firstDate, lastDate) => {
+            var arrayOfDays = this.getDaysBetweenDates(firstDate, lastDate);
+            var warranties = this.getWarrantiesByDays(arrayOfDays);
+            return warranties;
+        }
+        initWarrantiesLast7Days = () => {
+            var lastDay = moment().format("YYYY-MM-DD");
+            var firstDay = moment().subtract(7, "days").format("YYYY-MM-DD");
+            this.warrantiesBetweenDates = this.getWarrantiesBetweenDates(firstDay, lastDay);
+            // this.onUpdateData();
+        }
+    }
+
+    class ControllerWarranty{
+        constructor(view, model){
+            this.view = view;
+            this.model = model;
+
+            this.model.onUpdateData = this.onUpdateData;
+        }
+        onUpdateData = () => {
+            // this.view.warranties = this.model.warranties;
+            this.view.warrantiesBetweenDates = this.model.warrantiesBetweenDates;
+        }
+        getWarrantiesLast7Days = () => {
+            var lastDay = moment().format("YYYY-MM-DD");
+            var firstDay = moment().subtract(7, "days").format("YYYY-MM-DD");
+            var warrantiesLast7Days = this.model.getWarrantiesBetweenDates(firstDay, LastDay);
+        }
+    }
+
+    var app_warranty = new Vue({
+        el: "#app-warranty",
         data: {
-            url: "https://script.google.com/macros/s/AKfycbxSkbYSKouYGETxz3Jfd9MRLl8g_ljja6yoZznA62vxv3WpyN90xj38HIOPhhiHBPcNZw/exec",
-            sheetName: "CUOCGOI"
-        }, success: function(data){
-            console.log(data);
+            warrantiesBetweenDates: []
         }
     })
+
+    var appWarrantyController = new ControllerWarranty(app_warranty, new ModelWarranty());
 </script>
