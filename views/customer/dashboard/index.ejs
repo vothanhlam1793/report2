@@ -3,57 +3,80 @@
     <div class="border border-success rounded p-3">
         <h3>Tình trạng sức khỏe</h3>
         <div class="row">
-            <div class="col">
+            <div class="col border alert alert-success">
                 <div class="text-center">
                     <h5>Tốt</h5>
                 </div>
                 <div>
                     <p>{{getHealth('GOOD').length}}</p>
+                    <button class="btn btn-info" @click="getCustomCustomers('GOOD')">Xem chi tiết</button>
                 </div>
             </div>
-            <div class="col">
+            <div class="col border alert alert-primary">
                 <div class="text-center">
                     <h5>Không tốt</h5>
                 </div>
                 <div>
                     <p>{{getHealth('NOT_GOOD').length}}</p>
+                    <button class="btn btn-info" @click="getCustomCustomers('NOT_GOOD')">Xem chi tiết</button>
                 </div>
             </div>
-            <div class="col">
+            <div class="col border alert alert-warning">
                 <div class="text-center">
                     <h5>Bệnh</h5>
                 </div>
                 <div>
                     <p>{{getHealth('SICK').length}}</p>
+                    <button class="btn btn-info" @click="getCustomCustomers('SICK')">Xem chi tiết</button>
                 </div>
             </div>
-            <div class="col">
+            <div class="col border alert alert-danger">
                 <div class="text-center">
                     <h5>Không xác định</h5>
                 </div>
                 <div>
                     <p>{{getHealth().length}}</p>
-                    <a href="/">Xem chi tiet</a>
+                    <button class="btn btn-info" @click="getCustomCustomers()">Xem chi tiết</button>
                 </div>
             </div>
         </div>
+    </div>
+    <div>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Khách hàng</th>
+                    <th>Sức khỏe</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="customer in customCustomers">
+                    <td> {{ customer.kiot.name ? customer.kiot.name : '' }} </td>
+                    <td> {{ customer.origin.health ? customer.origin.health : 'Không xác định' }} </td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 <script>
     var view_dashboard = new Vue({
         el: "#dashboard-customer",
-        mixins: [_support_vue],
         data: {
             customers: [],
+            customCustomers: []
         },
         methods: {
             getHealth: function(){return []},
+            getCustomCustomers: function(){}
         }
     })
 
     class ModelDashboard {
         constructor(){
             this.customers = [];
+            this.customCustomers = [];
             this.onUpdateData = function(){};
             this.initData();
         }
@@ -79,12 +102,16 @@
             this.model = model;
             this.model.onUpdateData = this.onUpdateData;
             this.view.getHealth = this.handleGetHealth;
+            this.view.getCustomCustomers = this.getCustomCustomers;
         }
         onUpdateData = () => {
             this.view.$forceUpdate();
         }
         handleGetHealth = (state) => {
             return this.model.getHealth(state);
+        }
+        getCustomCustomers = (state) => {
+            this.view.customCustomers = this.model.getHealth(state);
         }
     }
     var app_dashboard = new ControllerDashboard(view_dashboard, new ModelDashboard());

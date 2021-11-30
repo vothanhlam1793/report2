@@ -1,12 +1,12 @@
 <!-- Cai nay la cho Minh phat trien -->
-<div id="app-warranty" class="container">
+<div id="app-warranty">
     <h3>BẢO HÀNH</h3>
     <table class="table table-bordered">
         <thead>
             <th>Ngày</th>
             <th>Tiếp nhận</th>
-            <th>Đang sửa chữa</th>
             <th>Đã nhận</th>
+            <th>Đang sửa chữa</th>
             <th>NCC</th>
             <th>Sẵn sàng</th>
             <th>Sẵn sàng xong</th>
@@ -17,8 +17,8 @@
             <tr v-for="warranty in warrantiesBetweenDates.slice().reverse()">
                 <td>{{ moment(warranty.NGAY).format("DD-MM") }}</td>
                 <td>{{ warranty.TIEP_NHAN }}</td>
-                <td>{{ warranty.DANG_SUA_CHUA }}</td>
                 <td>{{ warranty.DA_NHAN }}</td>
+                <td>{{ warranty.DANG_SUA_CHUA }}</td>
                 <td>{{ warranty.NHA_CUNG_CAP }}</td>
                 <td>{{ warranty.SAN_SANG }}</td>
                 <td>{{ warranty.SAN_SANG_DONE }}</td>
@@ -103,7 +103,7 @@
         }
         initWarrantiesLast7Days = () => {
             var lastDay = moment().format("YYYY-MM-DD");
-            var firstDay = moment().subtract(7, "days").format("YYYY-MM-DD");
+            var firstDay = moment().subtract(6, "days").format("YYYY-MM-DD");
             this.warrantiesBetweenDates = this.getWarrantiesBetweenDates(firstDay, lastDay);
             // this.onUpdateData();
         }
@@ -120,11 +120,11 @@
             // this.view.warranties = this.model.warranties;
             this.view.warrantiesBetweenDates = this.model.warrantiesBetweenDates;
         }
-        getWarrantiesLast7Days = () => {
-            var lastDay = moment().format("YYYY-MM-DD");
-            var firstDay = moment().subtract(7, "days").format("YYYY-MM-DD");
-            var warrantiesLast7Days = this.model.getWarrantiesBetweenDates(firstDay, LastDay);
-        }
+        // getWarrantiesLast7Days = () => {
+        //     var lastDay = moment().format("YYYY-MM-DD");
+        //     var firstDay = moment().subtract(7, "days").format("YYYY-MM-DD");
+        //     var warrantiesLast7Days = this.model.getWarrantiesBetweenDates(firstDay, LastDay);
+        // }
     }
 
     var app_warranty = new Vue({

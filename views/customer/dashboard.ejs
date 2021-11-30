@@ -3,7 +3,7 @@
     <div class="border border-success rounded p-3">
         <h3>Tình trạng sức khỏe</h3>
         <div class="row">
-            <div class="col">
+            <div class="col border alert alert-success">
                 <div class="text-center">
                     <h5>Tốt</h5>
                 </div>
@@ -11,7 +11,7 @@
                     <p>{{getHealth('GOOD').length}}</p>
                 </div>
             </div>
-            <div class="col">
+            <div class="col border alert alert-primary">
                 <div class="text-center">
                     <h5>Không tốt</h5>
                 </div>
@@ -19,7 +19,7 @@
                     <p>{{getHealth('NOT_GOOD').length}}</p>
                 </div>
             </div>
-            <div class="col">
+            <div class="col border alert alert-warning">
                 <div class="text-center">
                     <h5>Bệnh</h5>
                 </div>
@@ -27,7 +27,7 @@
                     <p>{{getHealth('SICK').length}}</p>
                 </div>
             </div>
-            <div class="col">
+            <div class="col border alert alert-danger">
                 <div class="text-center">
                     <h5>Không xác định</h5>
                 </div>
@@ -37,6 +37,11 @@
                 </div>
             </div>
         </div>
+    </div>
+    <div>
+        <table >
+
+        </table>
     </div>
 </div>
 <script>
