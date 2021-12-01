@@ -1,0 +1,111 @@
+<html>
+    <head>
+        <%- include("header.ejs"); %>
+    </head>
+    <body>
+        <%- include("menu.ejs"); %>
+        <div class="container-fluid">
+            <div id="app">
+                <table class="table table-bordered">
+                    <tr v-for="customer in customers">
+                        <td>{{customer.kiot.name}}</td>
+                        <td>{{customer.kiot.contactNumber}}</td>
+                        <td><set-group :code="customer.kiot.code"></set-group></td>
+                    </tr>
+                </table>
+            </div>
+            <script>
+                Vue.component('modal-set-group',{
+                    props: ['code'],
+                    data: function(){
+                        return {
+
+                        }
+                    },
+                    template: `
+                    <!-- The Modal -->
+                    <div class="modal" :id="'modal'+code">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+
+                            <!-- Modal Header -->
+                            <div class="modal-header">
+                                <h4 class="modal-title">Modal Heading</h4>
+                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                            </div>
+
+                            <!-- Modal body -->
+                            <div class="modal-body">
+                                Modal body..
+                            </div>
+
+                            <!-- Modal footer -->
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-danger" :onlick="jQuery('#modal' + code).toggle()">Close</button>
+                            </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    `
+                });
+                Vue.component('set-group', {
+                    props: ['code'],
+                    data: function(){
+                        return {
+
+                        }
+                    },
+                    methods: {
+                        set_group: function(){
+                            jQuery("#modal"+this.code).toggle();
+                        }
+                    },
+                    template: `
+                        <div>
+                            <modal-set-group :code="code"></modal-set-group>
+                            <button type="button" class="btn btn-primary" data-toggle="modal" :data-target="'modal'+code">
+  Open modal
+</button>
+                            <button class="btn btn-warning" @click="set_group()">G</button>
+                        </div>
+                    `
+                })
+                var view = new Vue({
+                    el: "#app",
+                    data: {
+                        customers: [],
+                    },
+                    methods: {
+
+                    }
+                })
+
+                class Controller {
+                    constructor(view, model){
+                        this.view = view;
+                        this.model = model;
+                        this.model.onUpdateData = this.onUpdateData;
+                    }
+                    onUpdateData = () => {
+                        this.view.customers = this.model.customers;
+                    }
+                }
+
+                class Model {
+                    constructor(){
+                        this.customers = [];
+                        this.onUpdateData = function(){};
+                        var that = this;
+                        $.get("/creta/customer", function(data){
+                            that.customers = data;
+                            that.onUpdateData();
+                        });
+                    }
+                }
+
+                var app = new Controller(view, new Model());
+            </script>
+        </div>
+    </body>
+</html>

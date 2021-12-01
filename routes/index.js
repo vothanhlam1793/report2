@@ -10,6 +10,10 @@ router.get('/', async function(req, res, next) {
   });
 });
 
+router.get("/component", async function(req, res){
+  res.render("component");
+})
+
 router.get("/sales", async function(req, res){
   var d = new Date()
   if((!req.query.from) || (!req.query.to)){
