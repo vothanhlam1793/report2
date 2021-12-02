@@ -12,4 +12,6 @@ db.customers = require("./customer.model")(mongoose);
 db.campaigns = require("./campaign.model")(mongoose);
 db.tasks = require("./task.model")(mongoose);
 db.phieus = require("./phieu.model")(mongoose);
+db.series = require("./serie.model")(mongoose);
+db.invoices = require("./invoice.model")(mongoose);
 module.exports = db;
