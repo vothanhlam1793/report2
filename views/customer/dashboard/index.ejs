@@ -8,7 +8,7 @@
                     <h5>Tốt</h5>
                 </div>
                 <div>
-                    <p>{{getHealth('GOOD').length}}</p>
+                    <p>{{good_customers.length}}</p>
                     <button class="btn btn-info" @click="getCustomCustomers('GOOD')">Xem chi tiết</button>
                 </div>
             </div>
@@ -17,7 +17,7 @@
                     <h5>Không tốt</h5>
                 </div>
                 <div>
-                    <p>{{getHealth('NOT_GOOD').length}}</p>
+                    <p>{{notGood_customers.length}}</p>
                     <button class="btn btn-info" @click="getCustomCustomers('NOT_GOOD')">Xem chi tiết</button>
                 </div>
             </div>
@@ -26,7 +26,7 @@
                     <h5>Bệnh</h5>
                 </div>
                 <div>
-                    <p>{{getHealth('SICK').length}}</p>
+                    <p>{{sick_customers.length}}</p>
                     <button class="btn btn-info" @click="getCustomCustomers('SICK')">Xem chi tiết</button>
                 </div>
             </div>
@@ -35,13 +35,14 @@
                     <h5>Không xác định</h5>
                 </div>
                 <div>
-                    <p>{{getHealth().length}}</p>
+                    <p>{{undefined_customers.length}}</p>
                     <button class="btn btn-info" @click="getCustomCustomers()">Xem chi tiết</button>
                 </div>
             </div>
         </div>
     </div>
     <div>
+
         <table class="table table-bordered">
             <thead>
                 <tr>
@@ -54,29 +55,140 @@
                 <tr v-for="customer in customCustomers">
                     <td> {{ customer.kiot.name ? customer.kiot.name : '' }} </td>
                     <td> {{ customer.origin.health ? customer.origin.health : 'Không xác định' }} </td>
-                    <td></td>
+                    <td><modal-set-group :code="customer.code" v-on:change-customer-health="changeCustomerHealth"></modal-set-group></td>
                 </tr>
             </tbody>
         </table>
+        
     </div>
 </div>
 <script>
+    Vue.component('modal-set-group',{
+        props: ['code'],
+        data: function(){
+            return {
+                customer: {kiot: {}, origin: {}},
+                healths: [{
+                    title: "Tốt",
+                    value: "GOOD" 
+                },{
+                    title: "Không Tốt",
+                    value: "NOT_GOOD" 
+                },{
+                    title: "Bệnh",
+                    value: "SICK" 
+                },{
+                    title: "Không xác định",
+                    value: "" 
+                }]
+            }
+        },
+        methods: {
+            open_box: function(){
+                // console.log("Here");
+                // console.log(jQuery("#modal"+this.code));
+                jQuery("#modal"+this.code).toggle();
+                if(!this.customer.code){
+                    var that = this;
+                    $.get("/creta/customer/"+this.code, function(data){
+                        that.customer = data;
+                    })
+                }
+            },
+            
+        },
+        template: `
+        <div>
+        <button class="btn btn-warning" @click="open_box()">Đổi TT</button>
+        <!-- The Modal -->
+        <div class="modal" :id="'modal'+code">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header ">
+                    <h4 class="modal-title">Chuyển trạng thái sức khỏe</h4>
+                    <button type="button" @click="open_box()">&times;</button>
+                </div>
+                <!-- Modal body -->
+                <div class="modal-body">
+                    <h4>{{ customer.kiot.name }}</h4>
+                    <div v-for="health in healths">
+                        <button class="btn btn-outline-info btn-block" @click="$emit('change-customer-health', {code: code, health: health.value}); open_box()">{{ health.title }}</button>
+                    </div>
+                </div>
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
+                </div>
+                </div>
+            </div>
+        </div>
+        </div>
+        `
+        });
+    Vue.component('change-customer-health', {
+        props: ['code', 'health'],
+        data: function(){
+            return {
+                customer: {}
+            }
+        },
+        methods: {
+            change_customer_health: function(){
+                var that = this;
+                $.get("/creta/customer/"+this.code, function(data){
+                    if(data.origin.id){
+                        console.log(data.origin.id);
+                        var customer = new Customer({id: data.origin.id})
+                    } else {
+                        var customer = new Customer();
+                    }
+                    customer.set("health", that.health.value);
+                    customer.set("code", that.code);
+                    customer.set("codeKiot", that.code);
+
+                    customer.save({}, {
+                        success: function(r, e){
+                            alert("SUCCESS: " + that.code);
+                        }
+                    })
+                });
+            }
+        },
+        template: `
+            <div>
+                <button class="btn btn-outline-info btn-block" @click="change_customer_health()">{{ health.title }}</button>
+            </div>
+        `
+    })
+
     var view_dashboard = new Vue({
         el: "#dashboard-customer",
         data: {
             customers: [],
-            customCustomers: []
+            customCustomers: [],
+            current_health_view: "GOOD",
+
+            good_customers : [],
+            notGood_customers : [],
+            sick_customers : [],
+            undefined_customers : [],
         },
         methods: {
             getHealth: function(){return []},
-            getCustomCustomers: function(){}
+            getCustomCustomers: function(){},
+            changeCustomerHealth: function(){}
         }
     })
 
     class ModelDashboard {
         constructor(){
             this.customers = [];
-            this.customCustomers = [];
+            this.good_customers = [];
+            this.notGood_customers = [];
+            this.sick_customers = [];
+            this.undefined_customers = [];
+            // this.customCustomers = [];
             this.onUpdateData = function(){};
             this.initData();
         }
@@ -84,6 +196,10 @@
             var that = this;
             $.get("/creta/customer", function(data){
                 that.customers = data;
+                that.good_customers = that.getHealth("GOOD");
+                that.notGood_customers = that.getHealth("NOT_GOOD");
+                that.sick_customers = that.getHealth("SICK");
+                that.undefined_customers = that.getHealth();
                 that.onUpdateData();
             })
         }
@@ -92,7 +208,40 @@
             var result = this.customers.filter(function(customer){
                 return customer.origin.health == state;
             });
+            
             return result;
+        }
+        getCustomCustomers = (state) => {
+            // this.customCustomers = this.getHealth(state);
+            // this.onUpdateData();
+            return this.getHealth(state);
+        }
+        changeCustomerHealth = (health, code) => {
+            var that = this;
+            $.get("/creta/customer/" + code, function(data){
+                if(data.origin.id){
+                    console.log(data.origin.id);
+                    var customer = new Customer({id: data.origin.id})
+                } else {
+                    var customer = new Customer();
+                }
+                customer.set("health", health);
+                customer.set("code", code);
+                customer.set("codeKiot", code);
+
+                customer.save({}, {
+                    success: function(r, e){
+                        // alert("SUCCESS: " + code);
+                        // console.log("Hello");
+                        that.initData();
+                        that.good_customers = that.getHealth("GOOD");
+                        that.notGood_customers = that.getHealth("NOT_GOOD");
+                        that.sick_customers = that.getHealth("SICK");
+                        that.undefined_customers = that.getHealth();                        
+                        that.onUpdateData();
+                    }
+                })
+            });
         }
     }
 
@@ -103,16 +252,35 @@
             this.model.onUpdateData = this.onUpdateData;
             this.view.getHealth = this.handleGetHealth;
             this.view.getCustomCustomers = this.getCustomCustomers;
+            this.view.changeCustomerHealth = this.changeCustomerHealth;
         }
         onUpdateData = () => {
-            this.view.$forceUpdate();
+            // this.view.$forceUpdate();
+            this.view.customers = this.model.customers;
+            // this.view.customCustomers = this.model.customCustomers;
+            this.view.good_customers = this.model.good_customers;
+            this.view.notGood_customers = this.model.notGood_customers;
+            this.view.sick_customers = this.model.sick_customers;
+            this.view.undefined_customers = this.model.undefined_customers;
+            this.view.customCustomers = this.model.getCustomCustomers(this.view.current_health_view);
         }
         handleGetHealth = (state) => {
             return this.model.getHealth(state);
         }
         getCustomCustomers = (state) => {
-            this.view.customCustomers = this.model.getHealth(state);
+            this.view.current_health_view = state;
+            this.view.customCustomers = this.model.getCustomCustomers(state);
         }
+        changeCustomerHealth = (code_and_health) => {
+            
+            var health = code_and_health.health;
+            var code = code_and_health.code;
+            console.log(health, code);
+            this.model.changeCustomerHealth(health, code);
+            // this.view.customCustomers = this.model.getCustomCustomers(this.view.current_health_view);
+            // console.log(this.view.customCustomers);
+        }
+        
     }
     var app_dashboard = new ControllerDashboard(view_dashboard, new ModelDashboard());
 </script>
