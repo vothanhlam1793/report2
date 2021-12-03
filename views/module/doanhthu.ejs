@@ -2,7 +2,7 @@
     <div class="text-center p-2">
         <h3>DOANH THU HÔM NAY</h3>
     </div>
-    <div v-if="init">
+    <div v-if="invoices.length == 0">
         <div>
             <p>Đang khởi tạo dữ liệu</p>
         </div>
@@ -24,8 +24,8 @@
                     <td class="col-6 text-center">Doanh số</td>
                 </tr>
                 <tr>
-                    <td class="text-center align-middle"><h4>{{invoicesToday.length}}</h4></td>
-                    <td class="text-center align-middle"><h4>{{numberWithCommas(getTotalToday())}}</h4></td>
+                    <td class="text-center align-middle"><h4>{{invoicesToday().length}}</h4></td>
+                    <td class="text-center align-middle"><h4>{{numberWithCommas(getTotalToday(invoicesToday()))}}</h4></td>
                 </tr>
             </table>
         </div>
@@ -48,30 +48,30 @@
                 </tr>
                 <tr>
                     <td>
-                        <table class="table table-bordered">
+                        <table class="table table-bordered" v-if="contacts.length > 0">
                             <tr>
-                                <td colspan="2" class="text-center"><strong>14</strong></td>
+                                <td colspan="2" class="text-center"><strong>{{contactTomorow().MESSENGER + contactTomorow().ZALO + contactTomorow().TELE}}</strong></td>
                             </tr>
                             <tr>
                                 <td class="col-8">Facebook</td>
-                                <td class="col-4 text-center">6</td>
+                                <td class="col-4 text-center">{{contactTomorow().MESSENGER}}</td>
                             </tr>
                             <tr>
                                 <td>Zalo</td>
-                                <td class="text-center">6</td>
+                                <td class="text-center">{{contactTomorow().ZALO}}</td>
                             </tr>
                             <tr>
                                 <td>Điện thoại</td>
-                                <td class="text-center">0</td>
+                                <td class="text-center">{{contactTomorow().TELE}}</td>
                             </tr>
                             <tr>
                                 <td>Website</td>
-                                <td class="text-center">7</td>
+                                <td class="text-center">0</td>
                             </tr>
                         </table>
                     </td>
-                    <td class="text-center align-middle"><h1>{{invoicesToday.length}}</h1></td>
-                    <td class="text-center align-middle"><h4>{{numberWithCommas(getTotalToday())}}</h4></td>
+                    <td class="text-center align-middle"><h1>{{invoicesToday().length}}</h1></td>
+                    <td class="text-center align-middle"><h4>{{numberWithCommas(getTotalToday(invoicesToday()))}}</h4></td>
                     <td class="text-center align-middle"><h4>{{numberWithCommas(target)}}</h4></td>
                 </tr>
             </table>
@@ -79,4 +79,106 @@
     </div>
     <div></div>
 </div>
-<script src="/js/module/doanhthu.js"></script>
+<script>
+function getEndDate(d){
+    return new Date(Math.round((new Date(d)).getTime()/86400000)*86400000 + (86400000 - 1)); 
+}
+function getStartDate(d){
+    return new Date(Math.round((new Date(d)).getTime()/86400000)*86400000);
+}
+var k = 0;
+var view_revenue = new Vue({
+    el: "#app-revenue",
+    mixins: [_support_vue],
+    data: {
+        init: true,
+        // variable in view
+        invoices: [],
+        target: 50000000,
+        contacts: [],
+    },
+    methods: {
+        contactTomorow: function(){
+            var a = new Date((new Date()).getTime() - 86400000*2);
+            var b = this.contacts.filter(function(e){
+                return (e.NGAY.split("T")[0] == a.toISOString().split("T")[0])
+            })
+            return b[0] || {};
+        },
+        invoicesToday: function(){
+            var a = getStartDate(new Date());
+            var b = getEndDate(new Date());
+            console.log(this.invoices);
+            return this.invoices.filter(function(e){
+                return (e.purchaseDate >= a.toISOString()) && (e.purchaseDate <= b.toISOString());
+            })
+        },
+        getTotalToday: function(invoices){
+            var temp = {
+                total: 0
+            }
+            try {
+                temp = invoices.reduce(function(t, e){
+                    return {
+                        total: t.total + e.total
+                    }
+                })
+            } catch (e) {
+
+            }
+            return temp.total;
+        }
+    },
+    created: function(){
+
+    }
+})
+
+class ControllerRevenue {
+    constructor(view, model){
+        this.view = view;
+        this.model = model;
+        this.model.bindUpdateData(this.onUpdateData);
+    }
+    onUpdateData = () => {
+        this.view.invoices = this.model.invoices;
+        this.view.contacts = this.model.contacts;
+    }
+}
+
+class ModelRevenue {
+    constructor(start, end){
+        this.invoices = [];
+        this.contacts = [];
+        this.startDate = new Date(Math.round((new Date(start)).getTime()/86400000)*86400000);
+        this.endDate = new Date(Math.round((new Date(end)).getTime()/86400000)*86400000);
+        var that = this;
+        $.get("/sales?from=" + (this.startDate).toISOString().split("T")[0]+ "&to=" + (this.endDate).toISOString().split("T")[0], function(d){
+            that.invoices = d.data;
+            that.onUpdateData();
+        });
+        $.ajax({
+                type: "POST",
+                url: "/api/sheet/fetch",
+                data: {
+                    url: "https://script.google.com/macros/s/AKfycbxSkbYSKouYGETxz3Jfd9MRLl8g_ljja6yoZznA62vxv3WpyN90xj38HIOPhhiHBPcNZw/exec",
+                    sheetName: "CUOCGOI"
+                }, success: function(data){
+                    that.contacts = data.filter(function(e){return e.NGAY !== ""});
+                    that.onUpdateData();
+                }
+        });
+    }
+    bindUpdateData = function(callback){
+        this.onUpdateData = callback;
+    }
+    reloadData = ()=>{
+        var that = this;
+        $.get("/sales?from=" + (this.startDate).toISOString().split("T")[0]+ "&to=" + (this.endDate).toISOString().split("T")[0], function(d){
+            that.invoices = d.data;
+            that.onUpdateData(that.invoices);
+        });
+    }
+}
+var appRevenue = new ControllerRevenue(view_revenue, new ModelRevenue("2021-11-01", "2021-12-31"));
+</script>

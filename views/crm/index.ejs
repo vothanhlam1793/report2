@@ -120,6 +120,7 @@
                                 <th>Tên</th>
                                 <th>Mua cuối</th>
                                 <th>Nợ</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -127,6 +128,7 @@
                                 <td>{{customer.name}}</td>
                                 <td>{{customer.lastBuy.split("T")[0]}}</td>
                                 <td>{{numberWithCommas(customer.debt)}}</td>
+                                <td><modal-set-group :code="customer.code"></modal-set-group></td>
                             </tr>
                         </tbody>
                     </table>
