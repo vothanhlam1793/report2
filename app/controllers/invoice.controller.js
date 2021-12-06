@@ -30,7 +30,7 @@ exports.create = (req, res) => {
 
 // Retrieve all Tutorials from the database.
 exports.findAll = (req, res) => {
-    conditional = {};
+    conditional = req.query; //
     Model.find(conditional).then(data => {
         res.send(data);
     }).catch(e=>{

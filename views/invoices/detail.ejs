@@ -20,6 +20,7 @@
             constructor(){
                 this.invoice = {},
                 this.invoice_kiot = {}
+                this.onUpdateData = function(){};
             }
             getInvoiceByCode = (code) => {
                 $.ajax({
@@ -437,6 +438,7 @@
                 this.init_component();
             }
         })
+        
         Vue.component('change-invoice-status', {
             props: ["code"],
             data: function(){
@@ -453,13 +455,19 @@
                 },
                 change_invoice_status: function(status){
                     
+                },
+                onUpdateData: function(){
+                    this.invoice = this.invoiceModel.invoice;
+                    this.$forceUpdate();
                 }
             },
             template: `
 
             `,
             created(){
-
+                // Init
+                // Bind with model
+                this.invoiceModel.onUpdateData = this.onUpdateData;
             }
         })
     </script>
