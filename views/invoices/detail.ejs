@@ -10,15 +10,16 @@
         </script>
     </head>
     <div id="view-detail-invoice">
-        <invoice-packages code="HD005547"></invoice-packages>
-        <create-customer-note code="KH000561"></create-customer-note>
-        <customer-notes code="KH000561"></customer-notes>
-        <send-invoice-sms code="HD005547"></send-invoice-sms>
+        <!-- <invoice-packages code="HD005547"></invoice-packages> -->
+        <!-- <create-customer-note code="KH000561"></create-customer-note> -->
+        <!-- <customer-notes code="KH000561"></customer-notes> -->
+        <!-- <send-invoice-sms code="HD005547"></send-invoice-sms> -->
+        <change-invoice-status code="HD005547"></change-invoice-status>
     </div>
     <script>
         class ModelInvoiceComponents {
             constructor(){
-                this.invoice = {},
+                this.invoice = {status: ""},
                 this.invoice_kiot = {}
                 this.onUpdateData = function(){};
             }
@@ -39,8 +40,22 @@
 
                 })
             }
-            saveInvoiceByCode = (code) => {
-                
+            changeInvoiceStatus = (status, code) => {
+                var that = this;
+                if(this.invoice.id){
+                    var inv = new Invoice({id: this.invoice.id});
+                } else {
+                    var inv = new Invoice();
+                }
+                inv.set("status", status);
+                inv.set("code", code);
+                inv.save({}, {
+                    success: function(r, e){
+                        // alert("Success: " + code);
+                        that.getInvoiceByCode(code);
+                        that.onUpdateData();
+                    }
+                })
             }
         }
         Vue.component('invoice-packages', {
@@ -443,31 +458,87 @@
             props: ["code"],
             data: function(){
                 return {
-                    statuss: [],
-                    invoiceModel: new ModelInvoiceComponents(),
-                    invoice: {}
+                    statuss: [{
+                        title: "Mới lên đơn",
+                        value: 1
+                    },{
+                        title: "Đã soạn hàng",
+                        value: 2
+                    },{
+                        title: "Đã đóng hàng",
+                        value: 3
+                    },{
+                        title: "Đã giao hàng",
+                        value: 4
+                    },{
+                        title: "Khách đã nhận",
+                        value: 5
+                    }],
+                    invoiceModel: new ModelInvoiceComponents()
                 }
             },
             methods: {
-                init_component: async function(){
-                    await this.invoiceModel.getInvoiceByCode(this.code);
-                    this.invoice = this.invoiceModel.invoice;
+                // Model - VM Functions
+                init_component: function(){
+                    this.invoiceModel.getInvoiceByCode(this.code);
                 },
                 change_invoice_status: function(status){
-                    
+                    this.invoiceModel.changeInvoiceStatus(status, this.code);
                 },
                 onUpdateData: function(){
-                    this.invoice = this.invoiceModel.invoice;
+                    // this.invoice = this.invoiceModel.invoice;
                     this.$forceUpdate();
+                },
+                // View Functions Only
+                open_box: function(){
+                    // console.log("Here");
+                    // console.log(jQuery("#modal"+this.code));
+                    jQuery("#modal-change-invoice-status"+this.code).toggle();
+                    // if(!this.customer.code){
+                    //     var that = this;
+                    //     $.get("/creta/customer/"+this.code, function(data){
+                    //         that.customer = data;
+                    //     })
+                    // }
+                },
+                compare_value( invoiceValue, value){
+                    return (invoiceValue == value);
                 }
             },
             template: `
-
+                <div>
+                    <button class="btn btn-warning" @click="open_box()">Thêm ghi chú</button>
+                    <!-- The Modal -->
+                    <div class="modal" :id="'modal-change-invoice-status' + code">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <!-- Modal Header -->
+                                <div class="modal-header ">
+                                    <h4 class="modal-title">TRẠNG THÁI ĐƠN HÀNG</h4>
+                                    <button type="button" @click="open_box()">&times;</button>
+                                </div>
+                                <!-- Modal body -->
+                                <div class="modal-body">
+                                    <div v-for="status in statuss">
+                                        <button class="btn btn-block" :class="{ 'btn-info' : (invoiceModel.invoice.status == status.value), 'btn-outline-info' : !(invoiceModel.invoice.status == status.value)}" @click="change_invoice_status(status.value)">{{ status.title }}</button>
+                                    </div>
+                                    
+                                </div>
+                                <!-- Modal footer -->
+                                <div class="modal-footer">
+                                    
+                                    <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             `,
             created(){
                 // Init
                 // Bind with model
                 this.invoiceModel.onUpdateData = this.onUpdateData;
+                this.init_component();
             }
         })
     </script>
