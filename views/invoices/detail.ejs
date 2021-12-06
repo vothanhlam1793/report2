@@ -1,0 +1,493 @@
+<html>
+    <head>
+        <%- include('../header.ejs') %>
+
+        
+        <script>
+            var Invoice = Backbone.Model.extend({
+                urlRoot: "/api/invoices"
+            })
+        </script>
+    </head>
+    <div id="view-detail-invoice">
+        <invoice-packages code="HD005547"></invoice-packages>
+        <create-customer-note code="KH000561"></create-customer-note>
+        <customer-notes code="KH000561"></customer-notes>
+        <send-invoice-sms code="HD005547"></send-invoice-sms>
+    </div>
+    <script>
+        class ModelInvoiceComponents {
+            constructor(){
+                this.invoice = {},
+                this.invoice_kiot = {}
+            }
+            getInvoiceByCode = (code) => {
+                $.ajax({
+                    url: "/api/invoices/code/" + code,
+                    method: "GET",
+                    success: (data) => {
+                        this.invoice = data;
+                    }
+                })
+                $.ajax({
+                    url: "/api/kiot/invoices/" + code,
+                    method: "GET",
+                    success: (data) => {
+                        this.invoice_kiot = data;
+                    }
+
+                })
+            }
+            saveInvoiceByCode = (code) => {
+                
+            }
+        }
+        Vue.component('invoice-packages', {
+            props:['code'],
+            data: function(){
+                return {
+                    package_count : 0,
+                    invoice: {}
+                }
+            },
+            methods: {
+                get_package_count: function(){
+                    // console.log(this.code);
+                    var that = this;
+                    $.ajax({
+                        url: "/api/invoices/code/" + this.code,
+                        method: "GET",
+                        success: (data) => {
+                            // console.log(data);
+                            that.invoice = data;
+                            if(data.notes){
+                                if (data.notes.length > 0){
+                                    data.notes.forEach((note)=> {
+                                        if(note.type == "SO_KIEN_HANG"){
+                                            that.package_count = note.value;
+                                        }
+                                    })
+                                }
+                            }
+                            
+                        }
+                    })
+                },
+                save_package_count: function(){
+                    console.log("saving...");
+                    var that = this;
+                    if(this.invoice.id){
+                        console.log(this.invoice.id);
+                        var invoice = new Invoice({id : this.invoice.id});
+                        if(this.invoice.notes){
+                            if (this.invoice.notes.length > 0){
+                                var count = 0;
+                                this.invoice.notes.forEach((note) => {                                
+                                    if(note.type == "SO_KIEN_HANG"){
+                                        count++;
+                                        note.value = that.package_count;
+                                    }
+                                })
+                                if (count == 0){
+                                    this.invoice.notes.push({
+                                        type: "SO_KIEN_HANG",
+                                        value: that.package_count
+                                    })
+                                }
+                            } else {
+                                this.invoice.notes.push({
+                                    type: "SO_KIEN_HANG",
+                                    value: that.package_count
+                                })
+                            }
+                        } else {
+                            var invoiceNotes = [{
+                                type: "SO_KIEN_HANG",
+                                value: that.package_count
+                            }]
+                            this.invoice.notes = invoiceNotes;
+                        }                        
+                        
+                        invoice.set("notes", this.invoice.notes);
+                        
+                    }
+                    else {
+                        var invoice = new Invoice();
+                        var invoiceNotes = [{
+                            type: "SO_KIEN_HANG",
+                            value: that.package_count
+                        }]
+                        invoice.set("notes", invoiceNotes);
+                    }
+                    invoice.set("code", this.code);
+                    
+                    invoice.save({},{
+                        success: function(r, e){
+                            alert("SUCCESS: " + that.code);
+                        }
+                     })
+                    
+                }
+            },
+            template: `
+                <div>
+                    <h3>Số kiện hàng</h3>
+                    <input v-model="package_count" type="number">
+                    <button @click="save_package_count()">Lưu</button>
+                </div>
+            `,
+            created(){
+                this.get_package_count();
+            }
+        })
+
+        Vue.component('send-invoice-sms', {
+            props:['code'],
+            data: function(){
+                return {
+                    to: "",
+                    msg: "",
+                    msg_count: 0,
+                    invoice: {},
+                    invoice_kiot: {}
+                }
+            },
+            methods: {
+                init_component: function(){
+                    console.log(this.code);
+                    var that = this;
+                    $.ajax({
+                        url: "/api/kiot/invoices/" + this.code,
+                        method: "GET",
+                        success: (data) => {
+                            that.invoice_kiot = data;
+                            that.to = data.invoiceDelivery.contactNumber || "";
+                            that.msg = "Đơn hàng " + that.code + " đã sẵn sàng tại kho CRETA. Đơn hàng sẽ sớm vận chuyển. Cảm ơn bạn đã ủng hộ CRETA."
+                            console.log(that.invoice_kiot);
+                        }
+                    })
+                    $.ajax({
+                        url: "/api/invoices/code/" + this.code,
+                        method: "GET",
+                        success: (data) => {
+                            that.invoice = data;
+                            // console.log(data);
+                            if(data.actions){
+                                if (data.actions.length > 0){
+                                    var actions_sms = data.actions.filter((action)=> {
+                                        return action.type == "SEND_SMS";
+                                    })
+
+                                    that.msg_count = actions_sms.length;
+                                }
+                            }
+                            
+                        }
+                    })
+                },
+                send_SMS: function(){
+                    var that = this;
+                    var url="http://data.creta.work/creta/action/playsms/send_sms.php";
+                    $.get(url + "?to=" + this.to + "&msg=" + this.msg, function(data){
+                        // console.log(data);
+                        if(true){
+                            if(that.invoice.id){
+                                console.log(that.invoice.id);
+                                var invoice = new Invoice({id : that.invoice.id});
+                                if(that.invoice.actions){
+                                    that.invoice.actions.push({
+                                        type: "SEND_SMS",
+                                        status: "OK",
+                                        value: that.msg_count + 1
+                                    })
+                                } else {
+                                    var invoiceActions = [{
+                                        type: "SEND_SMS",
+                                        status: "OK",
+                                        value: that.msg_count + 1
+                                    }]
+                                    that.invoice.actions = invoiceActions;
+                                }                        
+                                invoice.set("actions", that.invoice.actions);
+                            }
+                            else {
+                                var invoice = new Invoice();
+                                var invoiceActions = [{
+                                    type: "SEND_SMS",
+                                    status: "OK",
+                                    value: that.msg_count + 1
+                                }]
+                                invoice.set("actions", invoiceActions);
+                            }
+                            invoice.set("code", that.code);
+                            invoice.save({},{
+                                success: function(r, e){
+                                    alert("SUCCESS: " + that.code);
+                                }
+                            })
+                        }
+                    } )
+                },
+                open_box: function(){
+                    // console.log("Here");
+                    // console.log(jQuery("#modal"+this.code));
+                    jQuery("#modal-send-invoice-sms" + this.code).toggle();
+                    // if(!this.customer.code){
+                    //     var that = this;
+                    //     $.get("/creta/customer/"+this.code, function(data){
+                    //         that.customer = data;
+                    //     })
+                    // }
+                }
+            },
+            template: `
+            <div>
+                <button class="btn btn-warning" @click="open_box()">Gửi SMS</button>
+                <!-- The Modal -->
+                <div class="modal" :id="'modal-send-invoice-sms'+code">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                        <!-- Modal Header -->
+                        <div class="modal-header ">
+                            <h4 class="modal-title">Gửi tin nhắn</h4>
+                            <button type="button" @click="open_box()">&times;</button>
+                        </div>
+                        <!-- Modal body -->
+                        <div class="modal-body">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <td>Gửi tin nhắn đến số: </td>
+                                        <td><input class="form-control" v-model="to"></td>    
+                                    </tr>
+                                    <tr>
+                                        <td>Đơn hàng: </td>
+                                        <td>{{ invoice_kiot.code }}</td>    
+                                    </tr>
+                                    <tr>
+                                        <td>Lần gửi: </td>
+                                        <td>{{ msg_count }}</td>    
+                                    </tr>
+                                    <tr>
+                                        <td>Nội dung: </td>
+                                        <td><textarea class="form-control" v-model="msg" rows="3"></textarea></td>    
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Modal footer -->
+                        <div class="modal-footer">
+                            <button class="btn btn-success" @click="send_SMS()">Gửi</button>
+                            <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `,
+            created(){
+                this.init_component();
+            }
+        })
+
+        Vue.component('create-customer-note', {
+            props:['code'],
+            data: function(){
+                return {
+                    customer: {},
+                    customer_name: "",
+                    task_description: ""
+                }
+            },
+            methods: {
+                init_component: function(){
+                    var that = this;
+                    $.get("/creta/customer/" + this.code, function(data){
+                        that.customer_name = data.kiot.name ? data.kiot.name : "";
+                    })
+                },
+                create_customer_note: function(){
+                    var that = this;
+                    var task = new Task();
+                    task.set("title", this.code);
+                    task.set("description", this.task_description);
+                    task.set("type", "NHAC_GOI_HANG");
+                    
+                    task.save({}, {
+                        success: function(r, e){
+                            alert("SUCCESS: " + that.code);
+                        }
+                    })
+                },
+                open_box: function(){
+                    // console.log("Here");
+                    // console.log(jQuery("#modal"+this.code));
+                    jQuery("#modal-create-customer-task"+this.code).toggle();
+                    // if(!this.customer.code){
+                    //     var that = this;
+                    //     $.get("/creta/customer/"+this.code, function(data){
+                    //         that.customer = data;
+                    //     })
+                    // }
+                }
+            },
+            template: `
+            <div>
+                <button class="btn btn-warning" @click="open_box()">Thêm ghi chú</button>
+                <!-- The Modal -->
+                <div class="modal" :id="'modal-create-customer-task'+code">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                        <!-- Modal Header -->
+                        <div class="modal-header ">
+                            <h4 class="modal-title">GHI CHÚ GỬI HÀNG</h4>
+                            <button type="button" @click="open_box()">&times;</button>
+                        </div>
+                        <!-- Modal body -->
+                        <div class="modal-body">
+                            <div>
+                                <span>Khách hàng: </span><span><strong>
+                                {{ customer_name }}</strong></span>
+                                <textarea class="form-control" v-model="task_description"></textarea>
+                            </div>
+                        </div>
+                        <!-- Modal footer -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-success" @click="create_customer_note(), open_box()">Lưu</button>
+                            <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `,
+            created(){
+                this.init_component();
+            }
+        })
+
+        Vue.component('customer-notes', {
+            props:['code'],
+            data: function(){
+                return {
+                    tasks: [],
+                    customer_name: ""
+                }
+            },
+            methods: {
+                init_component: function(){
+                    var that = this;
+                    $.get("/creta/customer/" + this.code, function(data){
+                        that.customer_name = data.kiot.name ? data.kiot.name : "";
+                    })
+                    $.get("/api/tasks", function(tasks){
+                        // console.log(tasks);
+                        that.tasks = tasks.filter((task) => {
+                            return task.title == that.code;
+                        })
+                    })
+                },
+                complete_task: function(task_id){
+                    var that = this;
+                    var task_bb = new Task({id: task_id});
+                    task_bb.set("status", "DONE");
+                    task_bb.save({}, {
+                        success: function(r, e){
+                            // alert("SUCCESS!");
+                            that.init_component();
+                        }
+                    })
+                },
+                delete_task: function(task_id){
+                    var that=this;
+                    console.log("deleting...")
+                    var task = new Task({id: task_id});
+                    task.destroy({
+                        success: function(r, e){
+                            // alert("SUCCESS!");
+                            that.init_component();
+                        }
+                    })
+                }
+            },
+            template: `
+            <div>
+                <h4><strong>{{ customer_name }}</strong> - có ghi chú sau: </h4>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Nội dung ghi chú</th>
+                            <th>Xác nhận hoàn thành</th>
+                            <th>Hành động</th>    
+                        </tr>    
+                    </thead>
+                    <tbody>
+                        <tr v-for="(task, index) in tasks">
+                            <td>{{ index + 1 }}</td>
+                            <td>{{ task.description }}</td>
+                            <td><button class="btn btn-success" @click="complete_task(task.id)" :disabled="(task.status == 'DONE') ? true : false ">{{ (task.status == "DONE") ? "Đã hoàn thành" : "Hoàn thành"}}</button></td>
+                            <td><button class="btn btn-danger" @click="delete_task(task.id)">Xóa</button></td>
+                        </tr>    
+                    </tbody>    
+                </table>
+            </div>
+            `,
+            created(){
+                this.init_component();
+            }
+        })
+        Vue.component('change-invoice-status', {
+            props: ["code"],
+            data: function(){
+                return {
+                    statuss: [],
+                    invoiceModel: new ModelInvoiceComponents(),
+                    invoice: {}
+                }
+            },
+            methods: {
+                init_component: async function(){
+                    await this.invoiceModel.getInvoiceByCode(this.code);
+                    this.invoice = this.invoiceModel.invoice;
+                },
+                change_invoice_status: function(status){
+                    
+                }
+            },
+            template: `
+
+            `,
+            created(){
+
+            }
+        })
+    </script>
+    <script>
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        const params = Object.fromEntries(urlSearchParams.entries());
+        
+        var view_detail_invoice = new Vue({
+            el: "#view-detail-invoice",
+            data: {},
+            methods: {
+
+            }
+        })
+
+        class ModelDetailInvoice {
+            constructor(){
+
+            }
+        }
+
+        class ControllerDetailInvoice {
+            constructor(view, model){
+                this.view = view;
+                this.model = model;
+            }
+        }
+
+        var appDetailInvoiceController = new ControllerDetailInvoice(view_detail_invoice, new ModelDetailInvoice());
+    </script>
+</html>
