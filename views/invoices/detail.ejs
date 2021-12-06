@@ -458,6 +458,7 @@
             props: ["code"],
             data: function(){
                 return {
+                    // View
                     statuss: [{
                         title: "Mới lên đơn",
                         value: 1
@@ -474,6 +475,8 @@
                         title: "Khách đã nhận",
                         value: 5
                     }],
+
+                    // Model
                     invoiceModel: new ModelInvoiceComponents()
                 }
             },
@@ -486,21 +489,14 @@
                     this.invoiceModel.changeInvoiceStatus(status, this.code);
                 },
                 onUpdateData: function(){
-                    // this.invoice = this.invoiceModel.invoice;
                     this.$forceUpdate();
                 },
+
                 // View Functions Only
                 open_box: function(){
-                    // console.log("Here");
-                    // console.log(jQuery("#modal"+this.code));
                     jQuery("#modal-change-invoice-status"+this.code).toggle();
-                    // if(!this.customer.code){
-                    //     var that = this;
-                    //     $.get("/creta/customer/"+this.code, function(data){
-                    //         that.customer = data;
-                    //     })
-                    // }
                 },
+
                 compare_value( invoiceValue, value){
                     return (invoiceValue == value);
                 }
