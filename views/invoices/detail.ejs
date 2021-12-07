@@ -7,6 +7,10 @@
             var Invoice = Backbone.Model.extend({
                 urlRoot: "/api/invoices"
             })
+
+            var InvoiceProduct = Backbone.Model.extend({
+                urlRoot: "/api/invoiceProducts"
+            })
         </script>
     </head>
     <div id="view-detail-invoice">
@@ -14,14 +18,50 @@
         <!-- <create-customer-note code="KH000561"></create-customer-note> -->
         <!-- <customer-notes code="KH000561"></customer-notes> -->
         <!-- <send-invoice-sms code="HD005547"></send-invoice-sms> -->
-        <change-invoice-status code="HD005547"></change-invoice-status>
+        <!-- <change-invoice-status code="HD005547"></change-invoice-status> -->
+
+        <div class="container" v-if="invoiceModel.invoice_kiot.code">
+            <h2>Đơn hàng {{ invoiceModel.invoice_kiot.code }}</h2>
+            <button class="btn btn-warning" @click="turn_back()">Trang trước</button>                
+            <customer-notes :code="invoiceModel.invoice_kiot.customerCode"></customer-notes>
+            <div class="row m-1">
+                <create-customer-note :code="invoiceModel.invoice_kiot.customerCode" class="col"></create-customer-note>
+                <send-invoice-sms :code="invoiceModel.invoice_kiot.code" class="col"></send-invoice-sms>
+                <change-invoice-status :code="invoiceModel.invoice_kiot.code" class="col"></change-invoice-status>
+            </div>
+            
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <td>Check</td>
+                        <td>Tên</td>
+                        <td>Số lượng</td>
+                        <td>Hành động</td>
+                        <td>SL mã</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="product in invoiceModel.invoice_kiot.invoiceDetails">
+                        <td><input type="checkbox" class="form-control" @change="changeInvoiceProductCheck(invoiceModel.invoice_kiot.code, product.productCode)"></td>
+                        <td>{{ product.productName }}</td>
+                        <td>{{ product.quantity }}</td>
+                        <td><button>Nhập Code</button></td>
+                        <td>0</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <invoice-packages code="invoiceModel.invoice_kiot.code"></invoice-packages>
+        </div>
     </div>
     <script>
-        class ModelInvoiceComponents {
-            constructor(){
-                this.invoice = {status: ""},
-                this.invoice_kiot = {}
+        class ModelInvoice {
+            constructor(code){
+                this.invoice = {};
+                this.invoice_kiot = {};
+                this.invoice_products = [];
                 this.onUpdateData = function(){};
+                this.getInvoiceByCode(code);
             }
             getInvoiceByCode = (code) => {
                 $.ajax({
@@ -37,9 +77,68 @@
                     success: (data) => {
                         this.invoice_kiot = data;
                     }
+                })
+            }
+            getAllInvoiceProducts = (invoiceCode) => {
+                var that = this;
+                
+                $.ajax({
+                    url: "/api/invoiceProducts" + "?invoiceCode=" + invoiceCode,
+                    method: "GET",
+                    success: function(data){
+                        that.invoice_products = data;
+                    }
+                })
+            }
+            changeInvoiceProductCheck = (invoiceCode, productCode, check) => {
+                $.ajax({
+                    url: "/api/invoiceProducts" + "?invoiceCode=" + invoiceCode + "&productCode=" + productCode,
+                    method: "GET",
+                    success: function(data){
+                        if(data.length > 0){
+                            var ip = new InvoiceProduct({id : data[0].id});
+                        }
+                        else {
+                            var ip = new InvoiceProduct();                            
+                        }
+                        ip.set("check", check);   
+                        ip.save({}, {
+                            success: function(r, e){
+                                alert("SUCCESS: " + productCode);
+                            }
+                        })                     
+                    }
 
                 })
             }
+            addInvoiceProductCode = (invoiceCode, productCode, code) => {
+                $.ajax({
+                    url: "/api/invoiceProducts" + "?invoiceCode=" + invoiceCode + "&productCode=" + productCode,
+                    method: "GET",
+                    success: function(data){
+                        if(data.length > 0){
+                            var ip = new InvoiceProduct({id : data[0].id});
+                            if(data.codes){
+                                data.codes.push(code);
+                                ip.set("codes", data.codes);
+                            } else {
+                                ip.set("codes", [code]);
+                            }
+                        }
+                        else {
+                            var ip = new InvoiceProduct();
+                            ip.set("codes", [code]);                        
+                        }
+                        ip.save({}, {
+                            success: function(r, e){
+                                alert("SUCCESS: " + productCode);
+                            }
+                        })
+                    }
+
+                })
+            }
+            
             changeInvoiceStatus = (status, code) => {
                 var that = this;
                 if(this.invoice.id){
@@ -258,7 +357,7 @@
             },
             template: `
             <div>
-                <button class="btn btn-warning" @click="open_box()">Gửi SMS</button>
+                <button class="btn btn-info" @click="open_box()">Gửi SMS</button>
                 <!-- The Modal -->
                 <div class="modal" :id="'modal-send-invoice-sms'+code">
                     <div class="modal-dialog modal-lg">
@@ -349,7 +448,7 @@
             },
             template: `
             <div>
-                <button class="btn btn-warning" @click="open_box()">Thêm ghi chú</button>
+                <button class="btn btn-info" @click="open_box()">Thêm ghi chú</button>
                 <!-- The Modal -->
                 <div class="modal" :id="'modal-create-customer-task'+code">
                     <div class="modal-dialog">
@@ -428,16 +527,9 @@
             },
             template: `
             <div>
-                <h4><strong>{{ customer_name }}</strong> - có ghi chú sau: </h4>
+                <h5><strong>{{ customer_name }}</strong> - có ghi chú sau: </h5>
                 <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>STT</th>
-                            <th>Nội dung ghi chú</th>
-                            <th>Xác nhận hoàn thành</th>
-                            <th>Hành động</th>    
-                        </tr>    
-                    </thead>
+                    
                     <tbody>
                         <tr v-for="(task, index) in tasks">
                             <td>{{ index + 1 }}</td>
@@ -477,14 +569,12 @@
                     }],
 
                     // Model
-                    invoiceModel: new ModelInvoiceComponents()
+                    invoiceModel: new ModelInvoice(this.code)
                 }
             },
             methods: {
                 // Model - VM Functions
-                init_component: function(){
-                    this.invoiceModel.getInvoiceByCode(this.code);
-                },
+
                 change_invoice_status: function(status){
                     this.invoiceModel.changeInvoiceStatus(status, this.code);
                 },
@@ -503,7 +593,7 @@
             },
             template: `
                 <div>
-                    <button class="btn btn-warning" @click="open_box()">Thêm ghi chú</button>
+                    <button class="btn btn-info" @click="open_box()">Đổi trạng thái hóa đơn</button>
                     <!-- The Modal -->
                     <div class="modal" :id="'modal-change-invoice-status' + code">
                         <div class="modal-dialog">
@@ -534,35 +624,33 @@
                 // Init
                 // Bind with model
                 this.invoiceModel.onUpdateData = this.onUpdateData;
-                this.init_component();
+                // this.init_component();
             }
+        })
+        
+        Vue.component('add-ip-codes', {
+            props: ["invoiceCode, productCode"]
         })
     </script>
     <script>
         const urlSearchParams = new URLSearchParams(window.location.search);
         const params = Object.fromEntries(urlSearchParams.entries());
-        
+        if(!params.code){
+            alert("Mã hóa đơn không được để trống");
+        }
         var view_detail_invoice = new Vue({
             el: "#view-detail-invoice",
-            data: {},
+            data: {
+                invoiceModel: new ModelInvoice( params.code )
+            },
             methods: {
-
+                onUpdateData: function(){
+                    this.$forceUpdate();
+                }
+            },
+            created(){
+                this.invoiceModel.onUpdateData = this.onUpdateData;
             }
         })
-
-        class ModelDetailInvoice {
-            constructor(){
-
-            }
-        }
-
-        class ControllerDetailInvoice {
-            constructor(view, model){
-                this.view = view;
-                this.model = model;
-            }
-        }
-
-        var appDetailInvoiceController = new ControllerDetailInvoice(view_detail_invoice, new ModelDetailInvoice());
     </script>
 </html>

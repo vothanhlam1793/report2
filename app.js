@@ -53,6 +53,7 @@ require("./app/routes/customer_creta_route")(app);
 require("./app/routes/sheet.route")(app);
 require("./app/routes/phieu.route")(app);
 require("./app/routes/transaction.route")(app);
+require("./app/routes/invoiceProduct.route")(app);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
