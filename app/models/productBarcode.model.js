@@ -1,10 +1,10 @@
 module.exports = mongoose => {
     var schema = mongoose.Schema(
         {
-            invoiceCode: String,
+            productName: String,
             productCode: String,
-            codes: Array,
-            check: Boolean
+            code: String,
+            infos: Array
         },
         { timestamps: true }
     );
@@ -15,6 +15,6 @@ module.exports = mongoose => {
         return object;
     });
   
-    const Phieu = mongoose.model("phieu", schema);
-    return Phieu;
+    const ProductBarcode = mongoose.model("productBarcode", schema);
+    return ProductBarcode;
   };

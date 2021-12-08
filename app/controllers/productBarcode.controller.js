@@ -1,9 +1,9 @@
 const db = require("../models");
-const Model = db.campaigns;
-var nameController = "InvoiceProduct";
+const Model = db.productBarcode;
+var nameController = "ProductBarcode";
 
 function createObj (data) {
-    var objArray = ['invoiceCode', 'productCode', 'codes', 'check'];
+    var objArray = ['productName', 'productCode', 'code', 'infos'];
     var a = {};
     objArray.forEach(function(e){
         a[e] = data[e];
@@ -12,12 +12,13 @@ function createObj (data) {
 }
 // Create and Save a new Tutorial
 exports.create = (req, res) => {
-    if(!req.body.name){
-        res.status(400).send({
-            message: "Cannot empty the name"
-        })
-    }
+    // if(!req.body.code){
+    //     res.status(400).send({
+    //         message: "Cannot empty the name"
+    //     })
+    // }
     const model = new Model(createObj(req.body));
+    console.log(model);
     model.save(model).then(data=>{
         res.send(data);
     }).catch(e=>{
@@ -31,6 +32,7 @@ exports.create = (req, res) => {
 // Retrieve all Tutorials from the database.
 exports.findAll = (req, res) => {
     conditional = req.query;
+    console.log(conditional);
     Model.find(conditional).then(data => {
         res.send(data);
     }).catch(e=>{

@@ -14,7 +14,7 @@
         </script>
     </head>
     <div id="view-detail-invoice">
-        
+        <save-barcodes-product invoiceCode="HD005547" productCode="SP001363"></save-barcodes-product>
         <!-- <invoice-packages code="HD005547"></invoice-packages> -->
         <!-- <create-customer-note code="KH000561"></create-customer-note> -->
         <!-- <customer-notes code="KH000561"></customer-notes> -->
@@ -46,7 +46,7 @@
                         <td><input type="checkbox" class="form-control" @change="changeInvoiceProductCheck(invoiceModel.invoice_kiot.code, product.productCode)"></td>
                         <td>{{ product.productName }}</td>
                         <td>{{ product.quantity }}</td>
-                        <td><save-barcodes-product :invoice_code="invoiceModel.invoice_kiot.code" :product_code="product.productCode"></save-barcodes-product></td>
+                        <td><button>Nhập Code</button></td>
                         <td>0</td>
                     </tr>
                 </tbody>
@@ -148,8 +148,6 @@
             }
             initProductBarcodes = (productCode, invoiceCode) => {
                 this.getProductBarcodeByProductCode(productCode, invoiceCode);
-                // console.log(invoiceCode);
-                
                 this.getInvoiceKiot(invoiceCode);
             }
             getInvoiceKiot = (invoiceCode) => {
@@ -159,7 +157,7 @@
                     method: "GET",
                     success: (data) => {
                         that.invoiceKiot = data;
-                        // console.log(that.invoiceKiot);
+                        console.log(that.invoiceKiot);
                         that.onUpdateData();
                     }
                 })
@@ -191,14 +189,13 @@
                         console.log(data);
                         that.productBarcodes = data;
                         that.invoiceProductBarcodes = that.filterBarcodesByInvoice(invoiceCode, data);
-                        console.log(that.invoiceProductBarcodes);
+                        console.log("pcodes", that.productBarcodes);
+                        console.log("ipcodes", that.invoiceProductBarcodes);
                         that.onUpdateData();
                     }
                 })
             }
             addInvoiceProductBarcode = (invoiceCode, productCode, productName, code) => {
-                console.log(invoiceCode, productCode, productName, code);
-                var that = this;
                 var info = {
                     code: invoiceCode,
                     type: "HOA DON",
@@ -210,9 +207,7 @@
                     url : "/api/productBarcodes" + "?productCode=" + productCode + "&code=" + code,
                     method: "GET",
                     success: function(barcodes){
-                        console.log(barcodes);
                         if( barcodes.length > 0 ){
-                            console.log("1");
                             var product_barcode = new ProductBarcode({ id: barcodes[0].id});
                             if(barcodes[0].infos){
                                 barcodes[0].infos.push(info);
@@ -223,66 +218,30 @@
                             }
                             product_barcode.save({}, {
                                 sucess: function(r, e){
-                                    console.log("success")
                                     that.initProductBarcodes();
-                                },
-                                error: function(e){
-                                    console.log("err", e);
+                                    that.onUpdateData();
                                 }
                             })
                         }
                         else {
-                            console.log("2");
                             var product_barcode = new ProductBarcode();
-                            product_barcode.set("productCode", productCode);
-                            product_barcode.set("productName", productName);
-                            
-                            product_barcode.set("code", code);
-                            product_barcode.set("infos", [info]);
-                            // console.log(product_barcode);
-                            
-                            product_barcode.save({}, {
+                            var data = {
+                                productCode: productCode,
+                                productName: productName,
+                                code: code,
+                                infos: [info]
+                            }
+                            product_barcode.save(data, {
                                 success: function(r, e){
-                                    console.log("succees")
-                                    // console.log(r);
-                                    that.initProductBarcodes(productCode, invoiceCode);
-                                },
-                                error: function(e){
-                                    console.log("err", e);
+                                    that.initProductBarcodes();
+                                    that.onUpdateData();
                                 }
                             })
                         }
                     }
                 })
             }
-            deleteInvoiveProductBarcode = (invoiceCode, productCode, code) => {
-                console.log(invoiceCode, productCode, code);
-                var that =this;
-                $.ajax({
-                    url : "/api/productBarcodes" + "?productCode=" + productCode + "&code=" + code,
-                    method: "GET",
-                    success: function(barcodes){
-                        console.log(barcodes);
-                        if( barcodes.length > 0 ){
-                            var bc = barcodes[0].infos.filter((info)=>{
-                                return (info.code != invoiceCode)                            
-                            })
-                            if( bc.length == barcodes[0].infos.length){
-
-                            }
-                            else{
-                                var product_barcode = new ProductBarcode({id: barcodes[0].id});
-                                product_barcode.set("infos", bc);
-                                product_barcode.save({},{
-                                    success: function(r, e){
-                                        that.initProductBarcodes(productCode, invoiceCode);
-                                    }
-                                })
-                            }
-                        }
-                    }
-                })
-            }
+            
         }
         Vue.component('invoice-packages', {
             props:['code'],
@@ -767,28 +726,28 @@
         
         
         Vue.component('save-barcodes-product', {
-            props: ['invoice_code', 'product_code'],
+            props: ['invoiceCode', 'productCode'],
             data: function(){
                 return{
-                    productBarcodesModel : new ModelProDuctBarcodes(this.product_code, this.invoice_code),
-                    new_barcode: ""
+                    productBarcodesModel : new ModelProDuctBarcodes(this.productCode, this.invoiceCode),
                 }
             },
             methods: {
                 init_component: function(){
-                    console.log(this.invoice_code, this.product_code);
+                    console.log(this.invoiceCode, this.productCode);
                 },
                 onUpdateData: function(){
                     this.$forceUpdate();
                 },
-                delete_barcode: function(barcode){
-                    
-                    this.productBarcodesModel.deleteInvoiveProductBarcode(this.invoice_code, this.product_code, barcode);
+                saveProductBarcode: function(barcodes){
+
                 },
-                add_barcode: function(barcode){
-                    this.productBarcodesModel.addInvoiceProductBarcode(this.invoice_code, this.product_code, this.getName(this.product_code, this.productBarcodesModel.invoiceKiot) , barcode);
+
+                // View Functions Only
+                open_box: function(){
+                    jQuery("#modal-save-barcodes-product"+this.productCode).toggle();
                 },
-                getName: function(productCode, invoice){
+                getName(productCode, invoice){
                     var result = "";
                     if(invoice.invoiceDetails){
                         invoice.invoiceDetails.forEach((product) => {
@@ -798,38 +757,27 @@
                         })
                     }                    
                     return result;
-                },
-                // View Functions Only
-                open_box: function(){
-                    jQuery("#modal-save-barcodes-product"+this.product_code).toggle();
-                },
-                
+                }
             },
             template: `
                 <div>
                     <button class="btn btn-info" @click="open_box()">Nhập code</button>
                     <!-- The Modal -->
-                    <div class="modal" :id="'modal-save-barcodes-product' + product_code">
-                        <div class="modal-dialog modal-lg">
+                    <div class="modal" :id="'modal-save-barcodes-product' + productCode">
+                        <div class="modal-dialog">
                             <div class="modal-content">
                                 <!-- Modal Header -->
                                 <div class="modal-header ">
-                                    <h4 class="modal-title">{{ invoice_code }} - {{ getName(product_code, productBarcodesModel.invoiceKiot) }}</h4>
+                                    <h4 class="modal-title">{{ invoiceCode }} - {{ getName(productCode, productBarcodesModel.invoiceKiot) }}</h4>
                                     <button type="button" @click="open_box()">&times;</button>
                                 </div>
                                 <!-- Modal body -->
                                 <div class="modal-body">
-                                    <div v-for="barcode in productBarcodesModel.invoiceProductBarcodes" class="text-center alert alert-info">
-                                        <strong>{{ barcode.code }}</strong> <button @click="delete_barcode(barcode.code)">&times;</button>
-                                    </div>
-                                    
-                                    <div>
-                                        <strong>Nhập tay: </strong><input class="form-control" v-model="new_barcode">
-                                        <button class="btn btn-warning" @click="add_barcode(new_barcode)">Thêm</button>
-                                    </div>
+                                    <div v-for="barcode in ">
                                 </div>
                                 <!-- Modal footer -->
                                 <div class="modal-footer">
+                                    
                                     <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
                                 </div>
                             </div>
