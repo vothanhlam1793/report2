@@ -202,18 +202,18 @@
                     <tr>
                         <td>Mã HĐ</td>
                         <td>Tên khách</td>
-                        <td>Gấp</td>
+                        <!-- <td>Gấp</td> -->
                         <td>Trạng thái</td>
-                        <td>Giao việc</td>
+                        <!-- <td>Giao việc</td> -->
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="invoice in invoiceModel.kiot_filtered_invoices">
                         <td><a :href="'/invoices/detail?code='+ invoice.code">{{ invoice.code }}</a></td>
                         <td>{{ invoice.customerName }}</td>
-                        <td></td>
+                        <!-- <td></td> -->
                         <td>{{  }}</td>
-                        <td><button class="btn btn-primary">Giao</button></td>
+                        <!-- <td><button class="btn btn-primary">Giao</button></td> -->
                     </tr>
                 </tbody>
             </table>
