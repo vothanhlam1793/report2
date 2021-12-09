@@ -70,8 +70,18 @@
                 // if(d.function == 'add_code'){
                 //     app.add_code(d.code);
                 // }
-                
-                f1(e.data);
+                console.log(e.data);
+                var d;
+                try {
+                    d = JSON.parse(e.data);
+                } catch(e){
+                    d = {code: ""}
+                }
+                f1(d.code);
+                // if(e.data.code){
+                    
+                // }
+                // f1(e.data);
             };
 
             ws.onclose = function(e) {
@@ -819,11 +829,19 @@
                     this.$forceUpdate();
                 },
                 delete_barcode: function(barcode){
-                    
-                    this.productBarcodesModel.deleteInvoiveProductBarcode(this.invoice_code, this.product_code, barcode);
+                    if(barcode.length == 0){
+                        console.log("barcode ko duoc de trong");
+                    } else{
+                        this.productBarcodesModel.deleteInvoiveProductBarcode(this.invoice_code, this.product_code, barcode);
+                    }                    
                 },
                 add_barcode: function(barcode){
-                    this.productBarcodesModel.addInvoiceProductBarcode(this.invoice_code, this.product_code, this.getName(this.product_code, this.productBarcodesModel.invoiceKiot) , barcode);
+                    if(barcode.length == 0){
+                        console.log("barcode ko duoc de trong");
+                    }
+                    else {
+                        this.productBarcodesModel.addInvoiceProductBarcode(this.invoice_code, this.product_code, this.getName(this.product_code, this.productBarcodesModel.invoiceKiot) , barcode);
+                    }                    
                 },
                 getName: function(productCode, invoice){
                     var result = "";
@@ -865,7 +883,7 @@
                                     </div>
                                     
                                     <div>
-                                        <strong>Nhập tay: </strong><input class="form-control" v-model="new_barcode">
+                                        <strong>Nhập tay: </strong><input class="form-control" v-model="new_barcode" @keyup.enter="add_barcode(new_barcode)">
                                         <button class="btn btn-warning" @click="add_barcode(new_barcode)">Thêm</button>
                                     </div>
                                 </div>
