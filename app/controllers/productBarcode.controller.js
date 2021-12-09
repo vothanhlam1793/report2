@@ -18,7 +18,6 @@ exports.create = (req, res) => {
     //     })
     // }
     const model = new Model(createObj(req.body));
-    console.log(model);
     model.save(model).then(data=>{
         res.send(data);
     }).catch(e=>{
@@ -32,7 +31,6 @@ exports.create = (req, res) => {
 // Retrieve all Tutorials from the database.
 exports.findAll = (req, res) => {
     conditional = req.query;
-    console.log(conditional);
     Model.find(conditional).then(data => {
         res.send(data);
     }).catch(e=>{

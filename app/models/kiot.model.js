@@ -21,6 +21,23 @@ class InvoiceKiot {
     fetchAll = (pNew) => {
         return kiot.getFullInvoice(pNew);
     }
+    // fetchByQuery = (query) => {
+    //     var serialize = function(obj, prefix) {
+    //     var str = [],
+    //         p;
+    //     for (p in obj) {
+    //         if (obj.hasOwnProperty(p)) {
+    //         var k = prefix ? prefix + "[" + p + "]" : p,
+    //             v = obj[p];
+    //         str.push((v !== null && typeof v === "object") ?
+    //             serialize(v, k) :
+    //             encodeURIComponent(k) + "=" + encodeURIComponent(v));
+    //         }
+    //     }
+    //     return str.join("&");
+    //     }
+    //     return kiot.getKiotViet("https://public.kiotapi.com/invoices?" + serialize(query));
+    // }
 }
 
 module.exports.CustomerKiot = CustomerKiot;

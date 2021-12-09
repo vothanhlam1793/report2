@@ -38,7 +38,6 @@
                         <td>Tên</td>
                         <td>Số lượng</td>
                         <td>Hành động</td>
-                        <td>SL mã</td>
                     </tr>
                 </thead>
                 <tbody>
@@ -47,7 +46,6 @@
                         <td>{{ product.productName }}</td>
                         <td>{{ product.quantity }}</td>
                         <td><save-barcodes-product :invoice_code="invoiceModel.invoice_kiot.code" :product_code="product.productCode"></save-barcodes-product></td>
-                        <td>0</td>
                     </tr>
                 </tbody>
             </table>
@@ -55,6 +53,45 @@
             <invoice-packages code="invoiceModel.invoice_kiot.code"></invoice-packages>
         </div>
     </div>
+    <script>
+        var f1 = function(){};
+        // console.log("hi");
+        function connect() {
+            //var ws = new WebSocket("wss://dir.creta.work/public/messagepublish");
+            // console.log("aaaa");
+            var ws = new WebSocket("ws://node.creta.work:1888/scan_barcode");
+            ws.onopen = function() {
+                // subscribe to some channels
+                console.log("opened")
+            };
+
+            ws.onmessage = function(e) {
+                // var d = JSON.parse(e.data);
+                // if(d.function == 'add_code'){
+                //     app.add_code(d.code);
+                // }
+                
+                f1(e.data);
+            };
+
+            ws.onclose = function(e) {
+                // app.not_ready();
+                console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+                setTimeout(function() {
+                connect();
+                }, 1000);
+            };
+
+            ws.onerror = function(err) {
+                console.log(err);
+                console.error('Socket encountered error: ', err.message, 'Closing socket');
+                ws.close();
+            };
+            return ws;
+        }
+        connect();
+        
+    </script>
     <script>
         class ModelInvoice {
             constructor(code){
@@ -484,7 +521,7 @@
             },
             template: `
             <div>
-                <button class="btn btn-info" @click="open_box()">Gửi SMS</button>
+                <button class="btn btn-info" @click="open_box()">Gửi SMS <span class="badge badge-light">{{ msg_count }}</span></button>
                 <!-- The Modal -->
                 <div class="modal" :id="'modal-send-invoice-sms'+code">
                     <div class="modal-dialog modal-lg">
@@ -801,13 +838,17 @@
                 },
                 // View Functions Only
                 open_box: function(){
-                    jQuery("#modal-save-barcodes-product"+this.product_code).toggle();
+                    jQuery("#modal-save-barcodes-product"+this.product_code).show();
+                    f1 = this.add_barcode;
                 },
-                
+                close_box: function(){
+                    jQuery("#modal-save-barcodes-product"+this.product_code).hide();
+                    f1 = function(){}
+                },
             },
             template: `
                 <div>
-                    <button class="btn btn-info" @click="open_box()">Nhập code</button>
+                    <button class="btn btn-info" @click="open_box()">Nhập code <span class="badge badge-light">{{ productBarcodesModel.invoiceProductBarcodes.length }}</span> </button>
                     <!-- The Modal -->
                     <div class="modal" :id="'modal-save-barcodes-product' + product_code">
                         <div class="modal-dialog modal-lg">
@@ -815,7 +856,7 @@
                                 <!-- Modal Header -->
                                 <div class="modal-header ">
                                     <h4 class="modal-title">{{ invoice_code }} - {{ getName(product_code, productBarcodesModel.invoiceKiot) }}</h4>
-                                    <button type="button" @click="open_box()">&times;</button>
+                                    <button type="button" @click="close_box()">&times;</button>
                                 </div>
                                 <!-- Modal body -->
                                 <div class="modal-body">
@@ -830,7 +871,7 @@
                                 </div>
                                 <!-- Modal footer -->
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
+                                    <button type="button" class="btn btn-danger" @click="close_box()">Close</button>
                                 </div>
                             </div>
                         </div>
@@ -858,6 +899,9 @@
             methods: {
                 onUpdateData: function(){
                     this.$forceUpdate();
+                },
+                turn_back: function(){
+                    window.history.back();
                 }
             },
             created(){
