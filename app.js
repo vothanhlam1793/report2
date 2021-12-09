@@ -8,6 +8,7 @@ var indexRouter = require('./routes/index');
 var crmRouter = require('./routes/crm');
 var usersRouter = require('./routes/users');
 var customerRouter = require("./routes/customer");
+var invoicesRouter = require("./routes/invoices");
 
 var app = express();
 const db = require("./app/models");
@@ -40,16 +41,20 @@ app.use('/', indexRouter);
 app.use('/crm', crmRouter);
 app.use('/users', usersRouter);
 app.use("/customer", customerRouter);
+app.use("/invoices", invoicesRouter);
 app.use("/task", require("./routes/task"));
 app.use("/finance", require("./routes/finance"));
 require("./app/routes/task.route")(app);
 require("./app/routes/customer.route")(app);
+require("./app/routes/invoice.route")(app);
 require("./app/routes/note.route")(app);
 require("./app/routes/kiot.router")(app);
 require("./app/routes/customer_creta_route")(app);
 require("./app/routes/sheet.route")(app);
 require("./app/routes/phieu.route")(app);
 require("./app/routes/transaction.route")(app);
+require("./app/routes/productBarcode.route")(app);
+
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));

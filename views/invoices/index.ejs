@@ -1,0 +1,246 @@
+<html>
+    <head>
+        <%- include('../header.ejs') %>
+
+        
+        <script>
+            var Invoice = Backbone.Model.extend({
+                urlRoot: "/api/invoices"
+            })
+
+            var ProductBarcode = Backbone.Model.extend({
+                urlRoot: "/api/productBarcodes"
+            })
+        </script>
+        <script>
+            class ModelInvoices {
+                constructor(code){
+                    this.invoices = [];
+
+                    this.kiot_invoices = [];
+                    this.kiot_filtered_invoices = [];
+                    
+                    // this.invoice_products = [];
+                    this.onUpdateData = function(){};
+                    this.initInvoices();
+                }
+                initInvoices = () => {
+                    console.log("hello");
+                    this.getAllInvoices();
+                    this.getAllInvoicesKiot();
+                }
+                getAllInvoicesKiot = () => {
+                    console.log("a");
+                    var that = this;
+                    $.ajax({
+                        url: "/api/kiot/invoices",
+                        method: "GET",
+                        success: function(data){
+                            that.kiot_invoices = data;
+                            that.getInvoicesBetweenDates(moment().format("YYYY-MM-DD"), moment().format("YYYY-MM-DD"))
+                            that.onUpdateData();
+                        }
+                    })
+                }
+                getAllInvoices = () => {
+                    console.log("b");
+                    var that = this;
+                    $.ajax({
+                        url: "/api/invoices",
+                        method: "GET",
+                        success: function(data){
+                            that.invoices = data;
+                            that.onUpdateData();
+                        }
+                    })
+                }
+                getDaysBetweenDates = (firstDate, lastDate) => {
+                    var result = [];
+                    try {
+                        var firstDay = moment(firstDate);
+                        var lastDay = moment(lastDate);
+                        var tempDay = firstDay;
+                        if(firstDay > lastDay){
+
+                        } else {
+                            var count = 0;
+                            while (tempDay <= lastDay){
+                                result.push(moment(tempDay).format("YYYY-MM-DD"))
+                                tempDay = moment(tempDay).add(1, "days");
+                            }                    
+                        }
+                    } catch(err){
+                        console.log(err);
+                    }
+                    return result;
+                }
+                getInvoicesByDays = (arrayOfDays) =>  {
+                    var result = [];
+                    var that = this;
+                    arrayOfDays.forEach( (day) => {
+                        that.kiot_invoices.forEach( (invoice) => {
+                            if(moment(invoice.purchaseDate).format("YYYY-MM-DD") == moment(day).format("YYYY-MM-DD")){
+                                result.push(invoice);
+                            }
+                        } )
+                    });
+                    return result;
+                }
+                getInvoicesBetweenDates = (firstDate, lastDate) => {    
+                    console.log(firstDate, lastDate);
+                    var arrayOfDays = this.getDaysBetweenDates(firstDate, lastDate);
+                    var invoices = this.getInvoicesByDays(arrayOfDays);
+                    this.kiot_filtered_invoices = invoices;
+                    this.onUpdateData();
+                }
+            }
+
+            Vue.component('invoice-status', {
+            props: ["code"],
+            data: function(){
+                return {
+                    // View
+                    statuss: [{
+                        title: "Mới lên đơn",
+                        value: 1
+                    },{
+                        title: "Đã soạn hàng",
+                        value: 2
+                    },{
+                        title: "Đã đóng hàng",
+                        value: 3
+                    },{
+                        title: "Đã giao hàng",
+                        value: 4
+                    },{
+                        title: "Khách đã nhận",
+                        value: 5
+                    }],
+
+                    // Model
+                    invoiceModel: new ModelInvoice(this.code)
+                }
+            },
+            methods: {
+                // Model - VM Functions
+
+                change_invoice_status: function(status){
+                    this.invoiceModel.changeInvoiceStatus(status, this.code);
+                },
+                onUpdateData: function(){
+                    this.$forceUpdate();
+                },
+
+                // View Functions Only
+                open_box: function(){
+                    jQuery("#modal-change-invoice-status"+this.code).toggle();
+                },
+
+                compare_value( invoiceValue, value){
+                    return (invoiceValue == value);
+                },
+
+                getTitleByStatus (iStatus){
+                    var title = "Mới lên đơn";
+                    this.statuss.forEach( (status) => {
+                        if(iStatus == status.value){
+                            title = status.title;
+                        }
+                    })
+                    return title;
+                }
+            },
+            template: `
+                <div>
+                    <button class="btn btn-info" @click="open_box()">Trạng thái đơn hàng</button>
+                    <!-- The Modal -->
+                    <div class="modal" :id="'modal-change-invoice-status' + code">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <!-- Modal Header -->
+                                <div class="modal-header ">
+                                    <h4 class="modal-title">TRẠNG THÁI ĐƠN HÀNG</h4>
+                                    <button type="button" @click="open_box()">&times;</button>
+                                </div>
+                                <!-- Modal body -->
+                                <div class="modal-body">
+                                    <div v-for="status in statuss">
+                                        <button class="btn btn-block" :class="{ 'btn-info' : (invoiceModel.invoice.status == status.value), 'btn-outline-info' : !(invoiceModel.invoice.status == status.value)}" @click="change_invoice_status(status.value)">{{ status.title }}</button>
+                                    </div>
+                                    
+                                </div>
+                                <!-- Modal footer -->
+                                <div class="modal-footer">
+                                    
+                                    <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            created(){
+                // Init
+                // Bind with model
+                this.invoiceModel.onUpdateData = this.onUpdateData;
+                // this.init_component();
+            }
+        })
+        </script>
+    </head>
+    <body class="container">
+        <div id="view-all-invoices" >
+            <h1>Danh sách hóa đơn</h1>
+            <div class="row m-1">
+                <div class="m-1">
+                    Chọn ngày: <input type="date" v-model="inp_date" @change="getInvoicesBetweenDates(inp_date, inp_date)">
+                </div>
+
+            </div>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <td>Mã HĐ</td>
+                        <td>Tên khách</td>
+                        <!-- <td>Gấp</td> -->
+                        <td>Trạng thái</td>
+                        <!-- <td>Giao việc</td> -->
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="invoice in invoiceModel.kiot_filtered_invoices">
+                        <td><a :href="'/invoices/detail?code='+ invoice.code">{{ invoice.code }}</a></td>
+                        <td>{{ invoice.customerName }}</td>
+                        <!-- <td></td> -->
+                        <td>{{  }}</td>
+                        <!-- <td><button class="btn btn-primary">Giao</button></td> -->
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <script>
+            var app_all_invoices = new Vue({
+                el: "#view-all-invoices",
+                data: {
+                    invoiceModel : new ModelInvoices(),
+                    first_date : moment().format("YYYY-MM-DD"),
+                    last_date : moment().format("YYYY-MM-DD"),
+                    inp_date : moment().format("YYYY-MM-DD")
+                },
+                methods: {
+                    getInvoicesBetweenDates: function(firstDate, lastDate){
+                        this.invoiceModel.getInvoicesBetweenDates(firstDate, lastDate)
+                    },
+
+                    onUpdateData: function(){
+                        this.$forceUpdate();
+                    }
+                },
+                created(){
+                    this.invoiceModel.onUpdateData = this.onUpdateData;
+                    this.invoiceModel.getInvoicesBetweenDates(this.firstDate, this.lastDate);
+                }
+            });
+        </script>
+    </body>
+</html>

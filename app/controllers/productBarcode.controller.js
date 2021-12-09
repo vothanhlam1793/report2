@@ -1,9 +1,9 @@
 const db = require("../models");
-const Model = db.invoices;
-var nameController = "Invoice";
+const Model = db.productBarcode;
+var nameController = "ProductBarcode";
 
 function createObj (data) {
-    var objArray = ['code', 'action', 'notes', 'status'];
+    var objArray = ['productName', 'productCode', 'code', 'infos'];
     var a = {};
     objArray.forEach(function(e){
         a[e] = data[e];
@@ -12,7 +12,7 @@ function createObj (data) {
 }
 // Create and Save a new Tutorial
 exports.create = (req, res) => {
-    // if(!req.body.name){
+    // if(!req.body.code){
     //     res.status(400).send({
     //         message: "Cannot empty the name"
     //     })
@@ -30,7 +30,7 @@ exports.create = (req, res) => {
 
 // Retrieve all Tutorials from the database.
 exports.findAll = (req, res) => {
-    conditional = req.query; //
+    conditional = req.query;
     Model.find(conditional).then(data => {
         res.send(data);
     }).catch(e=>{
@@ -105,24 +105,4 @@ exports.deleteAll = (req, res) => {
 // Find all published Tutorials
 exports.findAllPublished = (req, res) => {
   
-};
-
-exports.getByCode = (req, res) => {
-    var code = req.params.code;
-    // console.log(code);
-    conditional = req.params.code ? {code : code} : {};
-    // console.log(conditional);
-    Model.find(conditional).then(data => {
-        console.log(data);
-        if(data[0]){
-            res.send(data[0]);
-        }
-        else {
-            res.send({});
-        }        
-    }).catch(e=>{
-        res.status(500).send({
-            message: e.message || "Error cannot querry all"
-        })
-    })  
 };

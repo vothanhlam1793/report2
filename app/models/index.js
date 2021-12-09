@@ -14,4 +14,5 @@ db.tasks = require("./task.model")(mongoose);
 db.phieus = require("./phieu.model")(mongoose);
 db.series = require("./serie.model")(mongoose);
 db.invoices = require("./invoice.model")(mongoose);
+db.productBarcode = require("./productBarcode.model")(mongoose);
 module.exports = db;

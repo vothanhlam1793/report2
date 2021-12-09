@@ -1,10 +1,10 @@
 module.exports = mongoose => {
     var schema = mongoose.Schema(
         {
+            productName: String,
+            productCode: String,
             code: String,
-            actions: Array,
-            notes: Array,
-            status: String
+            infos: Array
         },
         { timestamps: true }
     );
@@ -15,6 +15,6 @@ module.exports = mongoose => {
         return object;
     });
   
-    const Invoice = mongoose.model("invoice", schema);
-    return Invoice;
+    const ProductBarcode = mongoose.model("productBarcode", schema);
+    return ProductBarcode;
   };

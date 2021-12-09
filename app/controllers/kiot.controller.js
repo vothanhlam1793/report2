@@ -49,3 +49,12 @@ exports.getAllInvoice = function(req, res){
         });
     }
 }
+
+// exports.getInvoiceWithQuery = function(req, res){
+//     var invoice = new InvoiceKiot();
+//     invoice.fetchByQuery(req.query).then(data => {
+//         res.send(data);
+//     })
+
+
+// }
