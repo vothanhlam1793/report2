@@ -1,0 +1,32 @@
+<html>
+    <head>
+        <%- include('../header.ejs') %>
+        <script src="/js/ViewModels/Invoice/backbone.js"></script>
+        <script src="/js/ViewModels/Invoice/invoice.js"></script>
+        <script src="/js/ViewModels/Invoice/productBarcode.js"></script>
+        <script src="/js/ViewComponents/Invoice/invoice.js"></script>
+    </head>
+    <body>
+        <div id="app-invoices-dashboard">
+            <!-- <invoice-packages code="HD005547"></invoice-packages> -->
+            <!-- <send-invoice-sms code="HD005547"></send-invoice-sms> -->
+            <!-- <create-customer-note code="KH000561"></create-customer-note> -->
+            <customer-notes code="KH000561"></customer-notes>
+            <change-invoice-status code="HD005547"></change-invoice-status>
+        </div>
+        <script>
+            var app_invoice_dashboard = new Vue({
+                el: "#app-invoices-dashboard",
+                data: {
+
+                },
+                methods: {
+
+                },
+                created(){
+
+                }
+            })
+        </script>
+    </body>
+</html>

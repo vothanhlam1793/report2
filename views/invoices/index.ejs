@@ -18,7 +18,7 @@
                     this.invoices = [];
 
                     this.kiot_invoices = [];
-                    this.kiot_filtered_invoices = [];
+                    // this.kiot_filtered_invoices = [];
                     
                     // this.invoice_products = [];
                     this.onUpdateData = function(){};
@@ -37,7 +37,7 @@
                         method: "GET",
                         success: function(data){
                             that.kiot_invoices = data;
-                            that.getInvoicesBetweenDates(moment().format("YYYY-MM-DD"), moment().format("YYYY-MM-DD"))
+                            // that.getInvoicesBetweenDates(moment().format("YYYY-MM-DD"), moment().format("YYYY-MM-DD"))
                             that.onUpdateData();
                         }
                     })
@@ -90,8 +90,10 @@
                     console.log(firstDate, lastDate);
                     var arrayOfDays = this.getDaysBetweenDates(firstDate, lastDate);
                     var invoices = this.getInvoicesByDays(arrayOfDays);
-                    this.kiot_filtered_invoices = invoices;
-                    this.onUpdateData();
+                    // this.kiot_filtered_invoices = invoices;
+                    // this.onUpdateData();
+
+                    return invoices;
                 }
             }
 
@@ -209,7 +211,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="invoice in invoiceModel.kiot_filtered_invoices">
+                    <tr v-for="invoice in invoiceModel.getInvoicesBetweenDates(inp_date,inp_date)">
                         <td><a :href="'/invoices/detail?code='+ invoice.code">{{ invoice.code }}</a></td>
                         <td>{{ invoice.customerName }}</td>
                         <!-- <td></td> -->
