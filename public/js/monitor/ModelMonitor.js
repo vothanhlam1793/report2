@@ -29,6 +29,23 @@ class Monitor {
             })
         }
     }
+    create = () => {
+        this.task.save({}, {
+            success: function(){
+                console.log("DONE");
+            },
+            error: function(){
+                console.log("ERROR");
+            }
+        })
+    }
+    setLink = (link) => {
+        this.task.set("description", link);
+    }
+    createMonitor = () => {
+        this.shortlink = new Shortlink(this.task.get("description"));
+        this.shortlink.addWebhook("http://node.creta.work:30004/task/wmonitor?id=" + this.task.get("id"));
+    }
 }
 
 class Monitors{

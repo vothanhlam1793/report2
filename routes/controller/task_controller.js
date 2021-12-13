@@ -22,7 +22,10 @@ exports.monitor = function(req, res){
     Task.findById(id).then(data=>{
         if(data){
             console.log(data);
-            var temp = data.result.counter + 1
+            var temp = 1;
+            if(data.result){
+                temp = data.result.counter + 1
+            }
             data.result = {
                 function: "UP",
                 counter: temp
