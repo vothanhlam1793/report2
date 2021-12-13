@@ -25,8 +25,12 @@ class Shortlink {
 }
 
 class Monitor{
-    constructor(){
-        this.task = new Task({type: "MONITOR"});
+    constructor(obj){
+        if(obj){
+            this.task = new Task(obj);
+        } else {
+            this.task = new Task({type: "MONITOR"});
+        }
     }
 
     setLink = (link) => {
@@ -41,10 +45,13 @@ class Monitor{
         this.task.set("description", JSON.stringify(obj));
     }
 
-    create = () => {
+    create = (next) => {
         this.task.save({}, {
             success: function(){
                 console.log("DONE");
+                if(typeof next == "function"){
+                    next();
+                }
             },
             error: function(){
                 console.log("ERROR");
@@ -52,55 +59,61 @@ class Monitor{
         })
     }
 
-    createMonitor = () => {
+    createMonitor = (next) => {
         var that = this;
         this.shortlink.addWebhook("http://node.creta.work:30004/task/wmonitor?id=" + this.task.get("id"));
         this.shortlink.create(function(){
             var obj = JSON.parse(that.task.get("description"));
             obj.short = that.shortlink.url;
             that.task.set("description", JSON.stringify(obj));
-            that.create();
+            that.create(next);
         });
+    }
+
+    getResult = () => {
+        var ret = 0;
+        try {
+            ret = this.task.get("result").counter;
+        } catch (e) {
+
+        }
+        return ret;
+    }
+
+    getTitle = () => {
+        return this.task.get("title") || "Chưa có tiêu đề";
+    }
+
+    getShortlink = () => {
+        var url = "parse";
+        console.log(this.task.get("description"))
+        try {
+            url = JSON.parse(this.task.get("description")).short
+        } catch (e) {
+
+        }
+        return url;
+    }
+
+    getLink = () => {
+        var url = "parse";
+        try {
+            url = JSON.parse(this.task.get("description")).link
+        } catch (e) {
+
+        }
+        return url;
     }
 }
 
-// class Monitor {
-//     constructor(obj){
-//         if(obj){
-//             this.task = new Task(obj)
-//         } else {
-//             this.task = new Task({
-//                 type: "MONITOR"
-//             })
-//         }
-//     }
-//     create = () => {
-//         this.task.save({}, {
-//             success: function(){
-//                 console.log("DONE");
-//             },
-//             error: function(){
-//                 console.log("ERROR");
-//             }
-//         })
-//     }
-//     setLink = (link) => {
-//         this.task.set("description", link);
-//     }
-//     createMonitor = () => {
-//         var that = this;
-//         this.shortlink = new Shortlink(this.task.get("description"));
-//         this.shortlink.addWebhook("http://node.creta.work:30004/task/wmonitor?id=" + this.task.get("id"));
-//     }
-// }
-
-// class Monitors{
-//     constructor(){
-//         var that = this;
-//         $.get("/api/tasks?type=MONITOR", function(data){
-//             data.forEach(function(task){
-//                 that.tasks.push(new Monitor(task));
-//             })
-//         })
-//     }
-// }
+class Monitors{
+    constructor(){
+        var that = this;
+        that.tasks = [];
+        $.get("/api/tasks?type=MONITOR", function(data){
+            data.forEach(function(task){
+                that.tasks.push(new Monitor(task));
+            })
+        })
+    }
+}

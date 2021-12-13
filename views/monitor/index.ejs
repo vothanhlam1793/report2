@@ -6,16 +6,52 @@
     <body>
         <%- include("../menu.ejs"); %>
         <div class="container-fluid" id="app">
-            
+            <div class="p-3">
+                <label>Tiêu đề</label>
+                <input v-model="model.task.attributes.title" class="form-control">
+                <label>Link</label>
+                <input v-model="link"  class="form-control">
+                <div class="row mt-2">
+                    <div class="col text-center">
+                        <button @click="create()" class="btn btn-primary">Tạo</button>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Tiêu đề</th>
+                        <th>Link</th>
+                        <th>Lượng truy cập</th>
+                    </tr>
+                    <tr v-for="monitor in modelMonitors.tasks">
+                        <td>{{monitor.getTitle()}}</td>
+                        <td>{{monitor.getShortlink()}}<br><br>{{monitor.getLink()}}</td>
+                        <td>{{monitor.getResult()}}</td>
+                    </tr>
+                </table>
+            </div>
         </div>
         <script>
             var app = new Vue({
                 el: "#app",
                 data: {
+                    modelMonitors: new Monitors(),   
                     
+                    model: new Monitor(),
+                    link: ""
                 },
                 methods: {
-                    
+                    create: function(){
+                        var that = this;
+                        this.model.setLink(this.link);
+                        this.model.create(function(){
+                            that.model.createMonitor(function(){
+                                location.reload();
+                            });
+                        })
+                    }
+
                 },
                 created: function(){
 
