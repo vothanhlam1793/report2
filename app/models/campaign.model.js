@@ -2,10 +2,16 @@ module.exports = mongoose => {
     var schema = mongoose.Schema(
         {
             name: String,           // Ten hien thi
-            tag: String,            // Tao tag theo doi voi khach
+            tag: {
+                type: String,
+                unique: true 
+            },                      // Tao tag theo doi voi khach
             startDate: Date,        // Ngay bat dau
             endDate: Date,          // Ngay ket thuc
-            description: String     // Mo ta du an
+            description: String,     // Mo ta du an
+            type: String,
+            modules: Array,
+            campaigns: Array
         },
         { timestamps: true }
     );

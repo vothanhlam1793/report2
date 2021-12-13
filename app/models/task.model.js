@@ -5,11 +5,13 @@ module.exports = mongoose => {
             title: String,
             description: String,
             staff: String,
-            result: String,
+            result: Object,
             type: String,
             status: String,
             repeat: String,
-            repeatObject: Object
+            repeatObject: Object,
+            action: Object,
+            info: Object // infor so huu cua doi tuong
         },
         { timestamps: true }
     );

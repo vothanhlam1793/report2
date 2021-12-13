@@ -3,7 +3,7 @@ const Campaign = db.campaigns;
 var nameController = "Campaign";
 
 function createObj (data) {
-    var objArray = ['name', 'tag', 'startDate', 'endDate', 'description'];
+    var objArray = ['name', 'tag', 'startDate', 'endDate', 'description', 'type', 'modules', 'campaigns'];
     var a = {};
     objArray.forEach(function(e){
         a[e] = data[e];
@@ -30,7 +30,7 @@ exports.create = (req, res) => {
 
 // Retrieve all Tutorials from the database.
 exports.findAll = (req, res) => {
-    conditional = {};
+    conditional = req.query;
     Campaign.find(conditional).then(data => {
         res.send(data);
     }).catch(e=>{

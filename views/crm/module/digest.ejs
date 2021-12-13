@@ -1,0 +1,65 @@
+<div id="digest">
+    <div class="form-group">
+        <select class="form-control" v-model="slcDigest" @change="slc()">
+            <option v-for="digest in modelDigests.campaigns" :value="digest">{{digest.getName()}}</option>
+        </select>
+    </div>
+    <div v-if="slcDigest.getName()">
+        <div class="row">
+            <div class="col">
+                <h3>Thêm MODULE</h3>
+                <div class="form-group">
+                    <label>Module</label>
+                    <table class="table">
+                        <tr v-for="module, index in slcDigest.getModules()">
+                            <td>{{module.name}}</td>
+                            <td><button @click="slcDigest.removeModule(index)">x</button></td>
+                        </tr>
+                    </table>
+                    <select class="form-control" v-model="slcModule">
+                        <option v-for="module in slcDigest.getModulesAvailable()" :value="module">{{module.name}}</option>
+                    </select>
+                    <button class="btn btn-warning" @click="slcDigest.addModule(slcModule)">Thêm</button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
+                    <label>Campaigns</label>
+                    <table class="table">
+                        <tr v-for="campaign, index in slcDigest.getCampaigns()">
+                            <td>{{campaign.getName()}}</td>
+                            <td><button @click="slcDigest.removeCampaign(index)">x</button></td>
+                        </tr>
+                    </table>
+                    <select class="form-control" v-model="slcCampaign">
+                        <option v-for="campaign in modelCretaCampaigns.campaigns" :value="campaign">{{campaign.getName()}}</option>
+                    </select>
+                    <button class="btn btn-warning" @click="slcDigest.addCampaign(slcCampaign)">Thêm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    var app_digest = new Vue({
+        el: "#digest",
+        data: {
+            modelDigests: new Digests(),
+            modelCretaCampaigns: new CretaCampaigns(),
+            // View
+            slcDigest: new Digest(),
+            slcModule: {},
+            slcCampaign: new Campaign()
+        },
+        methods: {
+            slc: function(){
+                console.log(this.slcDigest);
+            }
+        },
+        created: function(){
+            
+        }
+    })
+</script>

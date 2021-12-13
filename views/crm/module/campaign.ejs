@@ -1,0 +1,42 @@
+<div id="campaign">
+    <div class="form-group">
+        <label>Tên</label>
+        <input class="form-control" v-model="model.campaign.attributes.name">
+    </div>
+    <div class="form-group">
+        <label>Tag</label>
+        <input class="form-control" v-model="model.campaign.attributes.tag">
+    </div>
+    <div class="form-group">
+        <label>Module</label>
+        <table class="table">
+            <tr v-for="module in model.getModules()">
+                <td>{{module.name}}</td>
+            </tr>
+        </table>
+        <select class="form-control" v-model="slcModule">
+            <option v-for="module in model.getModulesAvailable()" :value="module">{{module.name}}</option>
+        </select>
+        <button class="btn btn-warning" @click="model.addModule(slcModule)">Thêm</button>
+    </div>
+    <div class="form-group">
+        <button class="btn btn-primary" @click="model.create()">Tạo</button>
+    </div>
+</div>
+<script>
+    var app_campaign = new Vue({
+        el: "#campaign",
+        data: {
+            model: new CretaCampaign(),
+
+            // view
+            slcModule: {name: ""}
+        },
+        methods: {
+
+        },
+        created: function(){
+
+        }
+    })
+</script>

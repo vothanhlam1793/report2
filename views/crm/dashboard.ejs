@@ -1,0 +1,32 @@
+<html>
+    <head>
+        <%- include("../header.ejs"); %>
+        <script src="/js/crm/ModelCustomerCreta.js"></script>
+        <script src="/js/crm/CollectionCustomerCreta.js"></script>
+        <script src="/js/crm/ModelCampaignCreta.js"></script>
+        <script src="/js/crm/ModelModuleCrm.js"></script>
+        <script src="/js/crm/ComponentCRM.js"></script>
+        <script src="/js/crm/ModelApp.js"></script>
+    </head>
+    <body>
+        <%- include("../menu.ejs"); %>
+        <%- include("module/digest"); %>
+        <div class="container-fluid" id="app">
+            
+        </div>
+        <script>
+            var app = new Vue({
+                el: "#app",
+                data: {
+
+                },
+                methods: {
+                    
+                },
+                created: function(){
+
+                }
+            })
+        </script>
+    </body>
+</html>

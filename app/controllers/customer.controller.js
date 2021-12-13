@@ -79,7 +79,22 @@ exports.update = (req, res) => {
 
 // Delete a Tutorial with the specified id in the request
 exports.delete = (req, res) => {
-  
+    const id = req.params.id;
+    Customer.findByIdAndRemove(id).then(data=>{
+        if(!data){
+            res.status(400).send({
+                message: "Error - not remove"
+            })
+        } else {
+            res.send({
+                message: "Ok - success"
+            })
+        }
+    }).catch(e=>{
+        res.status(500).send({
+            message: "Cannot delete id " + id
+        })
+    }) 
 };
 
 // Delete all Tutorials from the database.

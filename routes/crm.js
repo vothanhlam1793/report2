@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var kiot = require("./adapter/kiot");
 var sheet = require("./adapter/sheet");
+var controllerCrm = require("./controller/crm_controller");
+
 /* GET home page. */
 router.get('/', async function(req, res, next) {
     console.log("CRM");
@@ -9,6 +11,11 @@ router.get('/', async function(req, res, next) {
         title: "CRM - CRETA v1.0"
     })
 });
+
+// CRM FrontEnd
+router.get("/dashboard", controllerCrm.dashboard)
+
+
 router.get('/customers', async function(req, res, next) {
     var customers = await kiot.getFullCustomer();
     res.send(customers);
