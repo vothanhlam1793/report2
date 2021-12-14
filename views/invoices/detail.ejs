@@ -477,6 +477,7 @@
                         })
                     },
                     send_SMS: function(){
+                        console.log("send");
                         var that = this;
                         var url="http://data.creta.work/creta/action/playsms/send_sms.php";
                         $.get(url + "?to=" + this.to + "&msg=" + this.msg, function(data){

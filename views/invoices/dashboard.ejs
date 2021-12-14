@@ -1,24 +1,38 @@
+
 <html>
     <head>
         <%- include('../header.ejs') %>
-        <script src="/js/ViewModel/Invoice/backbone.js"></script>
-        <script src="/js/ViewModel/Invoice/invoice.js"></script>
-        <script src="/js/ViewModel/Invoice/productBarcode.js"></script>
-        <script src="/js/ViewComponent/Invoice/invoice.js"></script>
+        <script src="/js/ViewModel/Customer/backbone.js"></script>
+        <script src="/js/ViewModel/Customer/customer.js"></script>
+        <script src="/js/ViewComponent/Customer/customer.js"></script>
     </head>
-    <body>
+    <body class="container">
         <div id="app-invoices-dashboard">
-            <!-- <invoice-packages code="HD005547"></invoice-packages> -->
-            <!-- <send-invoice-sms code="HD005547"></send-invoice-sms> -->
             <!-- <create-customer-note code="KH000561"></create-customer-note> -->
-            <customer-notes code="KH000561"></customer-notes>
-            <change-invoice-status code="HD005547"></change-invoice-status>
+            <table class="table table-bordered" >
+                <thead>
+                    <tr>
+                        <td>TÊN</td>
+                        <td>MUA CUỐI</td>
+                        <td>NỢ</td>
+                        <td>GHI CHÚ</td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="customer in customersModel.customers">
+                        <td>{{ customer.getKiotAttribute("name") || "" }}</td>
+                        <td>{{ moment(customer.getKiotAttribute("modifiedDate") || "").format("YYYY-MM-DD") }}</td>
+                        <td>{{ customer.getKiotAttribute("debt") }}</td>
+                        <td><create-customer-note :code="customer.customer.code"></create-customer-note></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         <script>
             var app_invoice_dashboard = new Vue({
                 el: "#app-invoices-dashboard",
                 data: {
-
+                    customersModel : new CretaCustomers()
                 },
                 methods: {
 

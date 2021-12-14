@@ -1,0 +1,28 @@
+<html>
+    <head>
+        <%- include('../header.ejs') %>
+        <script src="/js/ViewModel/Customer/backbone.js"></script>
+        <script src="/js/ViewModel/Customer/customer.js"></script>
+        <script src="/js/ViewComponent/Invoice/invoice.js"></script>
+    </head>
+    <body>
+        <div id="app-invoices-dashboard">
+            <create-customer-note code="KH000561"></create-customer-note>
+            <customer-notes code="KH000561"></customer-notes>
+        </div>
+        <script>
+            var app_invoice_dashboard = new Vue({
+                el: "#app-invoices-dashboard",
+                data: {
+                    
+                },
+                methods: {
+
+                },
+                created(){
+
+                }
+            })
+        </script>
+    </body>
+</html>
