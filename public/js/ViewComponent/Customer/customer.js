@@ -68,7 +68,7 @@ Vue.component("customer-notes", {
     data: function(){
         return {
             tasksModel: new ModelTasks({title: this.code}),
-            customerModel: new CretaCustomer()
+            customerModel: new CretaCustomer({ code: this.code })
         }
     },
     methods: {
@@ -78,23 +78,25 @@ Vue.component("customer-notes", {
     },
     template: `
         <div>
-            <h5><strong>{{ customerModel.customer.kiot? customerModel.customer.kiot.name : "" }}</strong> - có ghi chú sau: </h5>
+            <h5><strong>{{ customerModel.getKiotAttribute("name") }}</strong> - có ghi chú sau: </h5>
             <table class="table table-bordered">
                 
                 <tbody>
-                    <tr v-for="(task, index) in tasksModel.tasks">
+                    <tr v-for="(taskModel, index) in tasksModel.tasks">
                         <td>{{ index + 1 }}</td>
-                        <td>{{ task.description }}</td>
-                        <td><button class="btn btn-success" @click="complete_task(task.id, code)" :disabled="(task.status == 'DONE') ? true : false ">{{ (task.status == "DONE") ? "Đã hoàn thành" : "Hoàn thành"}}</button></td>
-                        <td><button class="btn btn-danger" @click="delete_task(task.id, code)">Xóa</button></td>
+                        <td>{{ taskModel.get("description") }}</td>
+                        <td><button class="btn btn-success" @click="taskModel.complete_task()" :disabled="(taskModel.get('status') == 'DONE') ? true : false ">{{ (taskModel.get('status') == "DONE") ? "Đã hoàn thành" : "Hoàn thành"}}</button></td>
+                        <td><button class="btn btn-danger" @click="taskModel.delete_task()">Xóa</button></td>
                     </tr>    
                 </tbody>    
             </table>
         </div>
     `,
     created(){
-        this.tasksModel.tasks.forEach( (taskModel) => {
-            taskModel._oUDs.push()
-        })
+        this.customerModel.fetch();
+        this.tasksModel.onUpdateData = this.onUpdateData;
+        // this.tasksModel.tasks.forEach( (taskModel) => {
+        //     taskModel._oUDs.push(tasksModel.init())
+        // })
     }
 })

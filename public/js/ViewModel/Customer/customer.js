@@ -120,6 +120,7 @@ class ModelCustomerTask extends Task {
 
 class ModelTasks {
     constructor(query){
+        this.query = query;
         var that = this;
         that.tasks = [];
         $.get("/api/tasks?" + serialize(query), function(data){
@@ -128,9 +129,15 @@ class ModelTasks {
             })
         })
     }
-    onUpdateData = () => {
-        
+    init(){
+        $.get("/api/tasks?" + serialize(this.query), function(data){
+            data.forEach(function(e){
+                that.tasks.push(new ModelCustomerTask(e));
+                this.onUpdateData();
+            })
+        })
     }
+    
 
 }
 
