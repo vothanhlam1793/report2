@@ -19,16 +19,37 @@ const db = require("../../app/models");
 exports.monitor = function(req, res){
     const Task = db.tasks;
     const id = req.query.id;
+    var d = (new Date()).toLocaleDateString();
     Task.findById(id).then(data=>{
         if(data){
-            console.log(data);
             var temp = 1;
             if(data.result){
                 temp = data.result.counter + 1
             }
+            var obj = [];
+            if(data.result.byDate == undefined){
+                obj = [];
+            } else {
+                obj = data.result.byDate;
+            }
+            var t = false;
+            obj.forEach(function(e){
+                console.log("1", e);
+                if(e.date == d){
+                    e.temp = e.temp + 1
+                    t = true;
+                }
+            })
+            if(t == false){
+                obj.push({
+                    date: d,
+                    temp: 1
+                });
+            }
             data.result = {
                 function: "UP",
-                counter: temp
+                counter: temp,
+                byDate: obj
             };
             data.save();
             res.send(data);
