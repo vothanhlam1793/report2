@@ -448,11 +448,51 @@ Vue.component("customer-notes-count", {
     methods: {
         onUpdateData: function(){
             this.$forceUpdate();
-        }
+        },
+        open_box: function(){
+            jQuery("#modal-customer-notes-count"+this.code).show();
+            f1 = this.add_barcode;
+        },
+        close_box: function(){
+            jQuery("#modal-customer-notes-count"+this.code).hide();
+            f1 = function(){}
+        },
     },
     template: `
-        <div>
-            <span class="badge" :class="{ 'badge-danger': ( tasksModel.tasks.length > 0 )}">{{ ( tasksModel.tasks.length > 0 ) ? tasksModel.tasks.length : "" }}<span>
+        <div v-if="tasksModel.tasks.length > 0">
+            <button class="btn btn-secondary" @click="open_box()">Xem
+            <span class="badge badge-danger">{{ tasksModel.tasks.length}}<span>
+            </button>
+            
+            <div class="modal" :id="'modal-customer-notes-count' + code">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <!-- Modal Header -->
+                        <div class="modal-header ">
+                            <h4>Ghi chú</h4>
+                            <button type="button" @click="close_box()">&times;</button>
+                        </div>
+                        <!-- Modal body -->
+                        <div class="modal-body">
+                            <table class="table table-bordered">
+                    
+                            <tbody>
+                                <tr v-for="(taskModel, index) in tasksModel.tasks">
+                                    <td>{{ index + 1 }}</td>
+                                    <td>{{ taskModel.get("description") }}</td>
+                                    <td><button class="btn btn-success" @click="taskModel.complete_task()" :disabled="(taskModel.get('status') == 'DONE') ? true : false ">{{ (taskModel.get('status') == "DONE") ? "Đã hoàn thành" : "Hoàn thành"}}</button></td>
+                                    <td><button class="btn btn-danger" @click="taskModel.delete_task()">Xóa</button></td>
+                                </tr>    
+                            </tbody>    
+                        </table> 
+                        </div>
+                        <!-- Modal footer -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-danger" @click="close_box()">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     `,
     created(){
@@ -472,23 +512,23 @@ Vue.component('change-invoice-status-2', {
             statuss: [{
                 title: "Mới lên đơn",
                 value: 1,
-                style: "btn-danger"
+                style: "danger"
             },{
                 title: "Đã soạn hàng",
                 value: 2,
-                style: "btn-warning"
+                style: "warning"
             },{
                 title: "Đã đóng hàng",
                 value: 3,
-                style: "btn-primary"
+                style: "primary"
             },{
                 title: "Đã giao hàng",
                 value: 4,
-                style: "btn-info"
+                style: "info"
             },{
                 title: "Khách đã nhận",
                 value: 5,
-                style: "btn-success"
+                style: "success"
             }],
 
             // Model
@@ -525,7 +565,7 @@ Vue.component('change-invoice-status-2', {
         },
 
         getStyleByStatus (iStatus){
-            var style = "btn-danger";
+            var style = "danger";
             this.statuss.forEach( (status) => {
                 if(iStatus == status.value){
                     style = status.style;
@@ -536,7 +576,8 @@ Vue.component('change-invoice-status-2', {
     },
     template: `
         <div>
-            <button class="btn" :class="[getStyleByStatus(invoiceModel.invoice.status)]" @click="open_box()">{{ getTitleByStatus(invoiceModel.invoice.status) }}</button>
+            <span :class="['text-' + getStyleByStatus(invoiceModel.invoice.status)]">{{ getTitleByStatus(invoiceModel.invoice.status) }}</span>
+            <button class="btn" :class="['btn-' + getStyleByStatus(invoiceModel.invoice.status)]" @click="open_box()">Đổi TT</button>
             <!-- The Modal -->
             <div class="modal" :id="'modal-change-invoice-status' + code">
                 <div class="modal-dialog">
