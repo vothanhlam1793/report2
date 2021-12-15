@@ -576,8 +576,8 @@ Vue.component('change-invoice-status-2', {
     },
     template: `
         <div>
-            <span :class="['text-' + getStyleByStatus(invoiceModel.invoice.status)]">{{ getTitleByStatus(invoiceModel.invoice.status) }}</span>
-            <button class="btn" :class="['btn-' + getStyleByStatus(invoiceModel.invoice.status)]" @click="open_box()">Đổi TT</button>
+            
+            <button class="btn" :class="['btn-' + getStyleByStatus(invoiceModel.invoice.status)]" @click="open_box()">{{ getTitleByStatus(invoiceModel.invoice.status) }}</button>
             <!-- The Modal -->
             <div class="modal" :id="'modal-change-invoice-status' + code">
                 <div class="modal-dialog">
