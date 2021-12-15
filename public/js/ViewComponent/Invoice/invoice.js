@@ -567,6 +567,7 @@ Vue.component('change-invoice-status-2', {
         // Init
         // Bind with model
         this.invoiceModel.onUpdateData = this.onUpdateData;
+        
         // this.init_component();
     }
 })

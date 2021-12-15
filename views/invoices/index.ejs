@@ -98,10 +98,11 @@
             }
             
             class ModelInvoiceStatus {
-                constructor(){
+                constructor(code){
                     // this.ready = false;
                     this.invoice = {};
                     this.invoice_kiot = {};
+                    this.initInvoice(code);
                     this.onUpdateDate = function(){};
                 }
                 initInvoice = (code) => {
