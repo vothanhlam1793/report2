@@ -167,7 +167,32 @@ class ModelInvoiceSMS extends ModelInvoice {
     }
 }
 
-class ModelInvoiceStatus extends ModelInvoice {
+class ModelInvoiceStatus {
+    constructor(){
+        // this.ready = false;
+        this.invoice = {};
+        this.invoice_kiot = {};
+        this.onUpdateDate = function(){};
+    }
+    initInvoice = (code) => {
+        var that = this;
+        $.ajax({
+            url: "/api/invoices/code/" + code,
+            method: "GET",
+            success: (data) => {
+                that.invoice = data;
+                that.onUpdateData();
+            }
+        })
+        $.ajax({
+            url: "/api/kiot/invoices/" + code,
+            method: "GET",
+            success: (data) => {
+                that.invoice_kiot = data;
+                that.onUpdateData();
+            }
+        })
+    }
     changeInvoiceStatus = (status, code) => {
         var that = this;
         if(this.invoice.id){

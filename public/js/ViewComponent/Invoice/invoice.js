@@ -436,3 +436,137 @@ Vue.component('save-barcodes-product', {
         // this.productBarcodesModel.initProductBarcodes(this.productCode, this.invoiceCode);
     }
 })
+
+Vue.component("customer-notes-count", {
+    props: ['code'],
+    data: function(){
+        return {
+            tasksModel: new ModelTasks({title: this.code}),
+            // customerModel: new CretaCustomer({ code: this.code })
+        }
+    },
+    methods: {
+        onUpdateData: function(){
+            this.$forceUpdate();
+        }
+    },
+    template: `
+        <div>
+            <span class="badge" :class="{ 'badge-danger': ( tasksModel.tasks.length > 0 )}">{{ ( tasksModel.tasks.length > 0 ) ? tasksModel.tasks.length : "" }}<span>
+        </div>
+    `,
+    created(){
+        // this.customerModel.fetch();
+        this.tasksModel.onUpdateData = this.onUpdateData;
+        // this.tasksModel.tasks.forEach( (taskModel) => {
+        //     taskModel._oUDs.push(tasksModel.init())
+        // })
+    }
+})
+
+Vue.component('change-invoice-status-2', {
+    props: ["code"],
+    data: function(){
+        return {
+            // View
+            statuss: [{
+                title: "Mới lên đơn",
+                value: 1,
+                style: "btn-danger"
+            },{
+                title: "Đã soạn hàng",
+                value: 2,
+                style: "btn-warning"
+            },{
+                title: "Đã đóng hàng",
+                value: 3,
+                style: "btn-primary"
+            },{
+                title: "Đã giao hàng",
+                value: 4,
+                style: "btn-info"
+            },{
+                title: "Khách đã nhận",
+                value: 5,
+                style: "btn-success"
+            }],
+
+            // Model
+            invoiceModel: new ModelInvoiceStatus(this.code)
+        }
+    },
+    methods: {
+        // Model - VM Functions
+
+        change_invoice_status: function(status){
+            this.invoiceModel.changeInvoiceStatus(status, this.code);
+        },
+        onUpdateData: function(){
+            this.$forceUpdate();
+        },
+
+        // View Functions Only
+        open_box: function(){
+            jQuery("#modal-change-invoice-status"+this.code).toggle();
+        },
+
+        compare_value( invoiceValue, value){
+            return (invoiceValue == value);
+        },
+
+        getTitleByStatus (iStatus){
+            var title = "Mới lên đơn";
+            this.statuss.forEach( (status) => {
+                if(iStatus == status.value){
+                    title = status.title;
+                }
+            })
+            return title;
+        },
+
+        getStyleByStatus (iStatus){
+            var style = "btn-danger";
+            this.statuss.forEach( (status) => {
+                if(iStatus == status.value){
+                    style = status.style;
+                }
+            })
+            return style;
+        }
+    },
+    template: `
+        <div>
+            <button class="btn" :class="[getStyleByStatus(invoiceModel.invoice.status)]" @click="open_box()">{{ getTitleByStatus(invoiceModel.invoice.status) }}</button>
+            <!-- The Modal -->
+            <div class="modal" :id="'modal-change-invoice-status' + code">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <!-- Modal Header -->
+                        <div class="modal-header ">
+                            <h4 class="modal-title">TRẠNG THÁI ĐƠN HÀNG</h4>
+                            <button type="button" @click="open_box()">&times;</button>
+                        </div>
+                        <!-- Modal body -->
+                        <div class="modal-body">
+                            <div v-for="status in statuss">
+                                <button class="btn btn-block" :class="{ 'btn-info' : (invoiceModel.invoice.status == status.value), 'btn-outline-info' : !(invoiceModel.invoice.status == status.value)}" @click="change_invoice_status(status.value)">{{ status.title }}</button>
+                            </div>
+                            
+                        </div>
+                        <!-- Modal footer -->
+                        <div class="modal-footer">
+                            
+                            <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `,
+    created(){
+        // Init
+        // Bind with model
+        this.invoiceModel.onUpdateData = this.onUpdateData;
+        // this.init_component();
+    }
+})

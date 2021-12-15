@@ -96,7 +96,50 @@
                     return invoices;
                 }
             }
-
+            
+            class ModelInvoiceStatus {
+                constructor(){
+                    // this.ready = false;
+                    this.invoice = {};
+                    this.invoice_kiot = {};
+                    this.onUpdateDate = function(){};
+                }
+                initInvoice = (code) => {
+                    var that = this;
+                    $.ajax({
+                        url: "/api/invoices/code/" + code,
+                        method: "GET",
+                        success: (data) => {
+                            that.invoice = data;
+                            that.onUpdateData();
+                        }
+                    })
+                    $.ajax({
+                        url: "/api/kiot/invoices/" + code,
+                        method: "GET",
+                        success: (data) => {
+                            that.invoice_kiot = data;
+                            that.onUpdateData();
+                        }
+                    })
+                }
+                changeInvoiceStatus = (status, code) => {
+                    var that = this;
+                    if(this.invoice.id){
+                        var inv = new Invoice({id: this.invoice.id});
+                    } else {
+                        var inv = new Invoice();
+                    }
+                    inv.set("status", status);
+                    inv.set("code", code);
+                    inv.save({}, {
+                        success: function(r, e){
+                            that.initInvoice(code);
+                            that.onUpdateData();
+                        }
+                    })
+                }
+            }
             Vue.component('invoice-status', {
             props: ["code"],
             data: function(){
@@ -189,6 +232,11 @@
             }
         })
         </script>
+        <script src="/js/ViewModel/Customer/backbone.js"></script>
+        <script src="/js/ViewModel/Customer/customer.js"></script>
+        <script src="/js/ViewComponent/Customer/customer.js"></script>
+        
+        <script src="/js/ViewComponent/Invoice/invoice.js"></script>
     </head>
     <body class="">
         <%- include("../menu.ejs"); %>
@@ -205,7 +253,7 @@
                     <tr>
                         <td>Mã HĐ</td>
                         <td>Tên khách</td>
-                        <!-- <td>Gấp</td> -->
+                        <td>Ghi chú đang có</td>
                         <td>Trạng thái</td>
                         <!-- <td>Giao việc</td> -->
                     </tr>
@@ -214,8 +262,8 @@
                     <tr v-for="invoice in invoiceModel.getInvoicesBetweenDates(inp_date,inp_date)">
                         <td><a :href="'/invoices/detail?code='+ invoice.code">{{ invoice.code }}</a></td>
                         <td>{{ invoice.customerName }}</td>
-                        <!-- <td></td> -->
-                        <td>{{  }}</td>
+                        <td><customer-notes-count :code="invoice.customerCode"></customer-notes-count></td>
+                        <td><change-invoice-status-2 :code="invoice.code"></change-invoice-status-2></td>
                         <!-- <td><button class="btn btn-primary">Giao</button></td> -->
                     </tr>
                 </tbody>
