@@ -3,7 +3,7 @@ const Model = db.invoices;
 var nameController = "Invoice";
 
 function createObj (data) {
-    var objArray = ['code', 'action', 'notes', 'status'];
+    var objArray = ['code', 'actions', 'notes', 'status'];
     var a = {};
     objArray.forEach(function(e){
         a[e] = data[e];

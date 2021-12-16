@@ -547,7 +547,7 @@ Vue.component('change-invoice-status-2', {
 
         // View Functions Only
         open_box: function(){
-            jQuery("#modal-change-invoice-status"+this.code).toggle();
+            jQuery("#modal-change-invoice-status"+this.code.substring(0,8)).toggle();
         },
 
         compare_value( invoiceValue, value){
@@ -579,7 +579,7 @@ Vue.component('change-invoice-status-2', {
             
             <button class="btn" :class="['btn-' + getStyleByStatus(invoiceModel.invoice.status)]" @click="open_box()">{{ getTitleByStatus(invoiceModel.invoice.status) }}</button>
             <!-- The Modal -->
-            <div class="modal" :id="'modal-change-invoice-status' + code">
+            <div class="modal" :id="'modal-change-invoice-status' + code.substring(0,8)">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <!-- Modal Header -->
