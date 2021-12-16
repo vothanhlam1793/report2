@@ -360,14 +360,13 @@
                     })
                 }
                 send_SMS = (to, msg, msg_count, invoiceCode) => {
-                    console.log("this.invoice.id", this.invoice.id);
+                    
                     var that = this;
                     var url="http://data.creta.work/creta/action/playsms/send_sms.php";
-                    // $.get(url + "?to=" + to + "&msg=" + msg, function(data){
+                    $.get(url + "?to=" + to + "&msg=" + msg, function(data){
                         // console.log(data);
                         if(true){
                             if(that.invoice.id){
-                                console.log(1);
                                 // console.log(that.invoice.id);
                                 var invoice = new Invoice({id : that.invoice.id});
                                 if(that.invoice.actions){
@@ -387,18 +386,16 @@
                                 invoice.set("actions", that.invoice.actions);
                             }
                             else {
-                                console.log(2);
                                 var invoice = new Invoice();
                                 var invoiceActions = [{
                                     type: "SEND_SMS",
                                     status: "OK",
                                     value: msg_count + 1
                                 }]
-                                console.log(invoiceActions);
                                 invoice.set("actions", invoiceActions);
                             }
                             invoice.set("code", invoiceCode);
-                            console.log("invoice", invoice);
+
                             invoice.save({},{
                                 success: function(r, e){
                                     that.initInvoice(invoiceCode);
@@ -406,7 +403,7 @@
                                 }
                             })
                         }
-                    // } )
+                    } )
                 }
                 get_msg_count = () => {
                     var result = 0;
