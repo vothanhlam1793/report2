@@ -333,6 +333,102 @@
                     })
                 }
             }
+            class ModelInvoiceSMS{
+                constructor(){
+                    // this.ready = false;
+                    this.invoice = {};
+                    this.invoice_kiot = {};
+                    this.onUpdateDate = function(){};
+                }
+                initInvoice = (code) => {
+                    var that = this;
+                    $.ajax({
+                        url: "/api/invoices/code/" + code,
+                        method: "GET",
+                        success: (data) => {
+                            that.invoice = data;
+                            that.onUpdateData();
+                        }
+                    })
+                    $.ajax({
+                        url: "/api/kiot/invoices/" + code,
+                        method: "GET",
+                        success: (data) => {
+                            that.invoice_kiot = data;
+                            that.onUpdateData();
+                        }
+                    })
+                }
+                send_SMS = (to, msg, msg_count, invoiceCode) => {
+                    console.log("this.invoice.id", this.invoice.id);
+                    var that = this;
+                    var url="http://data.creta.work/creta/action/playsms/send_sms.php";
+                    // $.get(url + "?to=" + to + "&msg=" + msg, function(data){
+                        // console.log(data);
+                        if(true){
+                            if(that.invoice.id){
+                                console.log(1);
+                                // console.log(that.invoice.id);
+                                var invoice = new Invoice({id : that.invoice.id});
+                                if(that.invoice.actions){
+                                    that.invoice.actions.push({
+                                        type: "SEND_SMS",
+                                        status: "OK",
+                                        value: msg_count + 1
+                                    })
+                                } else {
+                                    var invoiceActions = [{
+                                        type: "SEND_SMS",
+                                        status: "OK",
+                                        value: msg_count + 1
+                                    }]
+                                    that.invoice.actions = invoiceActions;
+                                }                        
+                                invoice.set("actions", that.invoice.actions);
+                            }
+                            else {
+                                console.log(2);
+                                var invoice = new Invoice();
+                                var invoiceActions = [{
+                                    type: "SEND_SMS",
+                                    status: "OK",
+                                    value: msg_count + 1
+                                }]
+                                console.log(invoiceActions);
+                                invoice.set("actions", invoiceActions);
+                            }
+                            invoice.set("code", invoiceCode);
+                            console.log("invoice", invoice);
+                            invoice.save({},{
+                                success: function(r, e){
+                                    that.initInvoice(invoiceCode);
+                                    alert("SUCCESS: " + invoiceCode);
+                                }
+                            })
+                        }
+                    // } )
+                }
+                get_msg_count = () => {
+                    var result = 0;
+                    if(this.invoice.actions){
+                        if (this.invoice.actions.length > 0){
+                            var actions_sms = this.invoice.actions.filter((action)=> {
+                                return action.type == "SEND_SMS";
+                            })
+
+                            result = actions_sms.length;
+                        }
+                    }
+                    return result;
+                }
+                get_to = () => {
+                    var result = "";
+                    if(this.invoice_kiot.invoiceDelivery){
+                        result = this.invoice_kiot.invoiceDelivery.contactNumber || "";
+                    }
+                    return result;
+                }
+            }
             Vue.component('invoice-packages', {
                 props:['code'],
                 data: function(){
@@ -432,6 +528,7 @@
                 }
             })
     
+
             Vue.component('send-invoice-sms', {
                 props:['code'],
                 data: function(){
@@ -439,86 +536,20 @@
                         to: "",
                         msg: "",
                         msg_count: 0,
-                        invoice: {},
-                        invoice_kiot: {}
+                        invoiceModel : new ModelInvoiceSMS()
                     }
                 },
                 methods: {
-                    init_component: function(){
-                        // console.log(this.code);
-                        var that = this;
-                        $.ajax({
-                            url: "/api/kiot/invoices/" + this.code,
-                            method: "GET",
-                            success: (data) => {
-                                that.invoice_kiot = data;
-                                that.to = data.invoiceDelivery.contactNumber || "";
-                                that.msg = "Đơn hàng " + that.code + " đã sẵn sàng tại kho CRETA. Đơn hàng sẽ sớm vận chuyển. Cảm ơn bạn đã ủng hộ CRETA."
-                                // console.log(that.invoice_kiot);
-                            }
-                        })
-                        $.ajax({
-                            url: "/api/invoices/code/" + this.code,
-                            method: "GET",
-                            success: (data) => {
-                                that.invoice = data;
-                                // console.log(data);
-                                if(data.actions){
-                                    if (data.actions.length > 0){
-                                        var actions_sms = data.actions.filter((action)=> {
-                                            return action.type == "SEND_SMS";
-                                        })
-    
-                                        that.msg_count = actions_sms.length;
-                                    }
-                                }
-                                
-                            }
-                        })
+                    onUpdateData: function(){
+
+                        this.to = this.invoiceModel.get_to();
+                        this.msg_count = this.invoiceModel.get_msg_count();
+
+                        this.$forceUpdate();
                     },
-                    send_SMS: function(){
-                        console.log("send");
-                        var that = this;
-                        var url="http://data.creta.work/creta/action/playsms/send_sms.php";
-                        $.get(url + "?to=" + this.to + "&msg=" + this.msg, function(data){
-                            // console.log(data);
-                            if(true){
-                                if(that.invoice.id){
-                                    // console.log(that.invoice.id);
-                                    var invoice = new Invoice({id : that.invoice.id});
-                                    if(that.invoice.actions){
-                                        that.invoice.actions.push({
-                                            type: "SEND_SMS",
-                                            status: "OK",
-                                            value: that.msg_count + 1
-                                        })
-                                    } else {
-                                        var invoiceActions = [{
-                                            type: "SEND_SMS",
-                                            status: "OK",
-                                            value: that.msg_count + 1
-                                        }]
-                                        that.invoice.actions = invoiceActions;
-                                    }                        
-                                    invoice.set("actions", that.invoice.actions);
-                                }
-                                else {
-                                    var invoice = new Invoice();
-                                    var invoiceActions = [{
-                                        type: "SEND_SMS",
-                                        status: "OK",
-                                        value: that.msg_count + 1
-                                    }]
-                                    invoice.set("actions", invoiceActions);
-                                }
-                                invoice.set("code", that.code);
-                                invoice.save({},{
-                                    success: function(r, e){
-                                        alert("SUCCESS: " + that.code);
-                                    }
-                                })
-                            }
-                        } )
+                    
+                    send_SMS: function(to, msg){
+                        this.invoiceModel.send_SMS(to, msg, this.msg_count, this.code);
                     },
                     open_box: function(){
                         // console.log("Here");
@@ -554,7 +585,7 @@
                                         </tr>
                                         <tr>
                                             <td>Đơn hàng: </td>
-                                            <td>{{ invoice_kiot.code }}</td>    
+                                            <td>{{ invoiceModel.invoice_kiot.code }}</td>    
                                         </tr>
                                         <tr>
                                             <td>Lần gửi: </td>
@@ -569,7 +600,7 @@
                             </div>
                             <!-- Modal footer -->
                             <div class="modal-footer">
-                                <button class="btn btn-success" @click="send_SMS()">Gửi</button>
+                                <button class="btn btn-success" @click="send_SMS(to, msg)">Gửi</button>
                                 <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
                             </div>
                             </div>
@@ -578,9 +609,162 @@
                 </div>
                 `,
                 created(){
-                    this.init_component();
+                    this.msg = "Đơn hàng " + this.code + " đã sẵn sàng tại kho CRETA. Đơn hàng sẽ sớm vận chuyển. Cảm ơn bạn đã ủng hộ CRETA.";
+                    this.invoiceModel.onUpdateData
+                    = this.onUpdateData;
+                    this.invoiceModel.initInvoice(this.code);
                 }
             })
+
+            // Vue.component('send-invoice-sms', {
+            //     props:['code'],
+            //     data: function(){
+            //         return {
+            //             to: "",
+            //             msg: "",
+            //             msg_count: 0,
+            //             invoice: {},
+            //             invoice_kiot: {}
+            //         }
+            //     },
+            //     methods: {
+            //         init_component: function(){
+            //             // console.log(this.code);
+            //             var that = this;
+            //             $.ajax({
+            //                 url: "/api/kiot/invoices/" + this.code,
+            //                 method: "GET",
+            //                 success: (data) => {
+            //                     that.invoice_kiot = data;
+            //                     that.to = data.invoiceDelivery.contactNumber || "";
+            //                     that.msg = "Đơn hàng " + that.code + " đã sẵn sàng tại kho CRETA. Đơn hàng sẽ sớm vận chuyển. Cảm ơn bạn đã ủng hộ CRETA."
+            //                     // console.log(that.invoice_kiot);
+            //                 }
+            //             })
+            //             $.ajax({
+            //                 url: "/api/invoices/code/" + this.code,
+            //                 method: "GET",
+            //                 success: (data) => {
+            //                     that.invoice = data;
+            //                     // console.log(data);
+            //                     if(data.actions){
+            //                         if (data.actions.length > 0){
+            //                             var actions_sms = data.actions.filter((action)=> {
+            //                                 return action.type == "SEND_SMS";
+            //                             })
+    
+            //                             that.msg_count = actions_sms.length;
+            //                         }
+            //                     }
+                                
+            //                 }
+            //             })
+            //         },
+            //         send_SMS: function(){
+            //             console.log("send");
+            //             var that = this;
+            //             var url="http://data.creta.work/creta/action/playsms/send_sms.php";
+            //             $.get(url + "?to=" + this.to + "&msg=" + this.msg, function(data){
+            //                 // console.log(data);
+            //                 if(true){
+            //                     if(that.invoice.id){
+            //                         // console.log(that.invoice.id);
+            //                         var invoice = new Invoice({id : that.invoice.id});
+            //                         if(that.invoice.actions){
+            //                             that.invoice.actions.push({
+            //                                 type: "SEND_SMS",
+            //                                 status: "OK",
+            //                                 value: that.msg_count + 1
+            //                             })
+            //                         } else {
+            //                             var invoiceActions = [{
+            //                                 type: "SEND_SMS",
+            //                                 status: "OK",
+            //                                 value: that.msg_count + 1
+            //                             }]
+            //                             that.invoice.actions = invoiceActions;
+            //                         }                        
+            //                         invoice.set("actions", that.invoice.actions);
+            //                     }
+            //                     else {
+            //                         var invoice = new Invoice();
+            //                         var invoiceActions = [{
+            //                             type: "SEND_SMS",
+            //                             status: "OK",
+            //                             value: that.msg_count + 1
+            //                         }]
+            //                         invoice.set("actions", invoiceActions);
+            //                     }
+            //                     invoice.set("code", that.code);
+            //                     invoice.save({},{
+            //                         success: function(r, e){
+            //                             alert("SUCCESS: " + that.code);
+            //                         }
+            //                     })
+            //                 }
+            //             } )
+            //         },
+            //         open_box: function(){
+            //             // console.log("Here");
+            //             // console.log(jQuery("#modal"+this.code));
+            //             jQuery("#modal-send-invoice-sms" + this.code.substring(0,8)).toggle();
+            //             // if(!this.customer.code){
+            //             //     var that = this;
+            //             //     $.get("/creta/customer/"+this.code, function(data){
+            //             //         that.customer = data;
+            //             //     })
+            //             // }
+            //         }
+            //     },
+            //     template: `
+            //     <div>
+            //         <button class="btn btn-info" @click="open_box()">Gửi SMS <span class="badge badge-light">{{ msg_count }}</span></button>
+            //         <!-- The Modal -->
+            //         <div class="modal" :id="'modal-send-invoice-sms'+code.substring(0,8)">
+            //             <div class="modal-dialog modal-lg">
+            //                 <div class="modal-content">
+            //                 <!-- Modal Header -->
+            //                 <div class="modal-header ">
+            //                     <h4 class="modal-title">Gửi tin nhắn</h4>
+            //                     <button type="button" @click="open_box()">&times;</button>
+            //                 </div>
+            //                 <!-- Modal body -->
+            //                 <div class="modal-body">
+            //                     <table class="table table-bordered">
+            //                         <tbody>
+            //                             <tr>
+            //                                 <td>Gửi tin nhắn đến số: </td>
+            //                                 <td><input class="form-control" v-model="to"></td>    
+            //                             </tr>
+            //                             <tr>
+            //                                 <td>Đơn hàng: </td>
+            //                                 <td>{{ invoice_kiot.code }}</td>    
+            //                             </tr>
+            //                             <tr>
+            //                                 <td>Lần gửi: </td>
+            //                                 <td>{{ msg_count }}</td>    
+            //                             </tr>
+            //                             <tr>
+            //                                 <td>Nội dung: </td>
+            //                                 <td><textarea class="form-control" v-model="msg" rows="3"></textarea></td>    
+            //                             </tr>
+            //                         </tbody>
+            //                     </table>
+            //                 </div>
+            //                 <!-- Modal footer -->
+            //                 <div class="modal-footer">
+            //                     <button class="btn btn-success" @click="send_SMS()">Gửi</button>
+            //                     <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
+            //                 </div>
+            //                 </div>
+            //             </div>
+            //         </div>
+            //     </div>
+            //     `,
+            //     created(){
+            //         this.init_component();
+            //     }
+            // })
     
             Vue.component('create-customer-note', {
                 props:['code'],
@@ -614,7 +798,7 @@
                     open_box: function(){
                         // console.log("Here");
                         // console.log(jQuery("#modal"+this.code));
-                        jQuery("#modal-create-customer-task"+this.code).toggle();
+                        jQuery("#modal-create-customer-task"+this.code.substring(0,8)).toggle();
                         // if(!this.customer.code){
                         //     var that = this;
                         //     $.get("/creta/customer/"+this.code, function(data){
@@ -627,7 +811,7 @@
                 <div>
                     <button class="btn btn-info" @click="open_box()">Thêm ghi chú</button>
                     <!-- The Modal -->
-                    <div class="modal" :id="'modal-create-customer-task'+code">
+                    <div class="modal" :id="'modal-create-customer-task'+code.substring(0,8)">
                         <div class="modal-dialog">
                             <div class="modal-content">
                             <!-- Modal Header -->
@@ -761,7 +945,7 @@
     
                     // View Functions Only
                     open_box: function(){
-                        jQuery("#modal-change-invoice-status"+this.code).toggle();
+                        jQuery("#modal-change-invoice-status"+this.code.substring(0,8)).toggle();
                     },
     
                     compare_value( invoiceValue, value){
@@ -782,7 +966,7 @@
                     <div>
                         <button class="btn btn-info" @click="open_box()">Trạng thái đơn hàng</button>
                         <!-- The Modal -->
-                        <div class="modal" :id="'modal-change-invoice-status' + code">
+                        <div class="modal" :id="'modal-change-invoice-status' + code.substring(0,8)">
                             <div class="modal-dialog">
                                 <div class="modal-content">
                                     <!-- Modal Header -->
@@ -859,11 +1043,11 @@
                     },
                     // View Functions Only
                     open_box: function(){
-                        jQuery("#modal-save-barcodes-product"+this.product_code).show();
+                        jQuery("#modal-save-barcodes-product"+this.product_code.substring(0,8)).show();
                         f1 = this.add_barcode;
                     },
                     close_box: function(){
-                        jQuery("#modal-save-barcodes-product"+this.product_code).hide();
+                        jQuery("#modal-save-barcodes-product"+this.product_code.substring(0,8)).hide();
                         f1 = function(){}
                     },
                 },
@@ -871,7 +1055,7 @@
                     <div>
                         <button class="btn btn-info" @click="open_box()">Nhập code <span class="badge badge-light">{{ productBarcodesModel.invoiceProductBarcodes.length }}</span> </button>
                         <!-- The Modal -->
-                        <div class="modal" :id="'modal-save-barcodes-product' + product_code">
+                        <div class="modal" :id="'modal-save-barcodes-product' + product_code.substring(0,8)">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
                                     <!-- Modal Header -->
