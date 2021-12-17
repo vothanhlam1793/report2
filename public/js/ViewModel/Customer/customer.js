@@ -177,3 +177,73 @@ class ModelTasks {
 //         })
 //     }
 // }
+
+class ModelCustomer {
+    constructor(code_or_object){
+        this.customer = {}
+        if( typeof code_or_object == "string"){
+            this.customer.origin = new Customer({ code: code_or_object });
+            this.customer.kiot = {};
+            this.customer.code = code_or_object;
+        } else if (typeof code_or_object == "object"){
+            this.customer.origin = new Customer(code_or_object.origin || {});
+            this.customer.kiot = code_or_object.kiot || {};
+            this.customer.code = code_or_object.code || "";
+        } else {
+            this.customer.origin = new Customer();
+            this.customer.kiot = {};
+            this.customer.code = "";
+        }
+    }
+
+    fetch = (next) => {
+        var that = this;
+        $.get("/creta/customer/" + this.customer.code, (data)=>{
+            that.customer = data;
+            if(typeof next == "function"){
+                next();
+            }
+        })    
+    }
+
+    get = ( attribute ) => {
+        if( attribute == "code" ){
+            return this.customer.code;
+        }
+        
+        if( this.customer.kiot[attribute] ){
+            return this.customer.kiot[attribute];
+        } 
+        
+        if (this.customer.origin.get(attribute)){
+            return this.customer.origin.get(attribute);
+        }
+    }
+    getName = () => {
+        return this.get("name") || "";
+    }
+    getLastDate = () => {
+        return moment(this.get("modifiedDate") || "").format("YYYY-MM-DD");
+    }
+    getDebt = () => {
+        return this.get("debt") || 0;
+    }
+    getCode = () => {
+        return this.get("code");
+    }
+}
+
+class ModelCustomers {
+    constructor(){        
+        this.customers = [];        
+    }
+    fetch = () =>{
+        var that = this;
+        $.get("/creta/customer", function(data){
+            data.forEach(function(customer){
+                var c = new ModelCustomer(customer);
+                that.customers.push(c);
+            })
+        });
+    }
+}

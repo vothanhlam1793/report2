@@ -23,10 +23,10 @@
                 </thead>
                 <tbody>
                     <tr v-for="customer in customersModel.customers">
-                        <td>{{ customer.getKiotAttribute("name") || "" }}</td>
-                        <td>{{ moment(customer.getKiotAttribute("modifiedDate") || "").format("YYYY-MM-DD") }}</td>
-                        <td>{{ customer.getKiotAttribute("debt") }}</td>
-                        <td><create-customer-note :code="customer.customer.code"></create-customer-note></td>
+                        <td>{{ customer.getName() }}</td>
+                        <td>{{ customer.getLastDate() }}</td>
+                        <td>{{ customer.getDebt() }}</td>
+                        <td><create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode()})"></create-customer-note></td>
                     </tr>
                 </tbody>
             </table>
@@ -35,13 +35,13 @@
             var app_invoice_dashboard = new Vue({
                 el: "#app-invoices-dashboard",
                 data: {
-                    customersModel : new CretaCustomers()
+                    customersModel : new ModelCustomers()
                 },
                 methods: {
 
                 },
                 created(){
-
+                    this.customersModel.fetch();
                 }
             })
         </script>

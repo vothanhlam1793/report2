@@ -1,10 +1,10 @@
 Vue.component("create-customer-note", {
-    props: ['code'],
+    props: ['code','customer','task_model'],
     data: function(){
         return {
             task_description: "",
-            customerModel: new CretaCustomer({code: this.code}),
-            taskModel: new ModelCustomerTask({title: this.code})
+            // customerModel: this._props.customer,
+            // taskModel: new ModelCustomerTask({title: this.code})
         }
     },
     methods: {
@@ -42,13 +42,13 @@ Vue.component("create-customer-note", {
                     <div class="modal-body">
                         <div>
                             <span>Khách hàng: </span><span><strong>
-                            {{ customerModel.getKiotAttribute("name") }}</strong></span>
+                            {{ customer.getName() }}</strong></span>
                             <textarea class="form-control" v-model="task_description"></textarea>
                         </div>
                     </div>
                     <!-- Modal footer -->
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-success" @click="taskModel.create_task(task_description), open_box()">Lưu</button>
+                        <button type="button" class="btn btn-success" @click="task_model.create_task(task_description), open_box()">Lưu</button>
                         <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
                     </div>
                     </div>
@@ -57,9 +57,7 @@ Vue.component("create-customer-note", {
         </div>
     `,
     created(){
-        this.customerModel.fetch();
-        this.taskModel._oUDs.push(this.onUpdateData);
-        this.customerModel._oUDs.push(this.onUpdateData);
+        this.task_model._oUDs.push(this.onUpdateData);
     }
 })
 
