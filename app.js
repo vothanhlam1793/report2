@@ -39,6 +39,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/crm', crmRouter);
+app.use('/cart', require("./routes/cart"));
 app.use('/users', usersRouter);
 app.use("/customer", customerRouter);
 app.use("/invoices", invoicesRouter);

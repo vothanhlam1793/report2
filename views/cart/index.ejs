@@ -1,0 +1,90 @@
+<html>
+    <head>
+        <%- include("../header.ejs"); %>
+        <script src="/js/cart.js"></script>
+    </head>
+    <body>
+        <%- include("../menu.ejs"); %>
+        <div id="cart" class="container-fluid">
+            <div class="alert alert-success mt-3">
+                Tổng đơn: {{model.carts.length}}
+            </div>
+
+            <table class="table table-bordered table-striped table-hover">
+                <tr>
+                    <th>Tên</th>
+                    <th>Điện thoại</th>
+                    <th>Ngày</th>
+                    <th>Tổng đơn</th>
+                </tr>
+                <tr v-for="cart in model.carts" @click="select(cart)">
+                    <td>{{cart.getName()}}</td>
+                    <td>{{cart.getPhone()}}</td>
+                    <td>{{cart.getDateCreated()}}</td>
+                    <td class="text-right">{{numberWithCommas(cart.getTotal())}}</td>
+                </tr>
+            </table>
+
+
+            <!-- The Modal -->
+            <div class="modal" id="myModal">
+                <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+            
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                    <h4 class="modal-title">{{slcCart.getName()}}</h4>
+                    <button type="button" class="close" data-dismiss="modal" @click="closeModal()">&times;</button>
+                    </div>
+            
+                    <!-- Modal body -->
+                    <div class="modal-body">
+                        <table class="table table-bordered table-striped table-hover">
+                            <tr>
+                                <th>Tên</th>
+                                <th>Số lượng</th>
+                                <th>Giá</th>
+                                <th>Tổng</th>
+                            </tr>
+                            <tr v-for="product in slcCart.getProducts()">
+                                <td>{{product.getName()}}</td>
+                                <td>{{product.getQuanlity()}}</td>
+                                <td class="text-right">{{numberWithCommas(product.getPrice())}}</td>
+                                <td class="text-right">{{numberWithCommas(product.getTotal())}}</td>
+                            </tr>
+                        </table>
+                        <div class="text-right">
+                            <p>Tổng: {{numberWithCommas(slcCart.getTotal())}}</p>
+                        </div>
+                    </div>
+            
+                    <!-- Modal footer -->
+                    <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-dismiss="modal" @click="closeModal()">Close</button>
+                    </div>
+            
+                </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            var app_cart = new Vue({
+                el: "#cart",
+                mixins: [_support_vue],
+                data: {
+                    model: new Carts(),
+                    slcCart: new Cart(),
+                }, methods: {
+                    select: function(_cart){
+                        this.slcCart = _cart;
+                        jQuery("#myModal").show();
+                    },
+                    closeModal: function(){
+                        jQuery("#myModal").hide();
+                    }
+                }
+            })
+        </script>
+    </body>
+</html>
