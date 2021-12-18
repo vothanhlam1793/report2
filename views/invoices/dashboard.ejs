@@ -12,6 +12,7 @@
         <div id="app-invoices-dashboard">
             <!-- <create-customer-note code="KH000561"></create-customer-note> -->
             <!-- <customer-notes code="KH000561"></customer-notes> -->
+            <input type="text" v-model="input_name">
             <table class="table table-bordered" >
                 <thead>
                     <tr>
@@ -22,12 +23,22 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="customer in customersModel.customers">
-                        <td>{{ customer.getName() }}</td>
-                        <td>{{ customer.getLastDate() }}</td>
-                        <td>{{ customer.getDebt() }}</td>
-                        <td><create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode()})"></create-customer-note></td>
-                    </tr>
+                    <!-- <template v-if="input_name == ''">
+                        <tr v-for="customer in customersModel.customers">
+                            <td>{{ customer.getName() }}</td>
+                            <td>{{ customer.getLastDate() }}</td>
+                            <td>{{ customer.getDebt() }}</td>
+                            <td><create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode()})"></create-customer-note></td>
+                        </tr>
+                    </template> -->
+                    <template>
+                        <tr v-for="customer in customersModel.filterByName(input_name)">
+                            <td>{{ customer.getName() }}</td>
+                            <td>{{ customer.getLastDate() }}</td>
+                            <td>{{ customer.getDebt() }}</td>
+                            <td><create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode()})"></create-customer-note></td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
@@ -35,6 +46,7 @@
             var app_invoice_dashboard = new Vue({
                 el: "#app-invoices-dashboard",
                 data: {
+                    input_name: "",
                     customersModel : new ModelCustomers()
                 },
                 methods: {

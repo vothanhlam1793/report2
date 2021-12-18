@@ -246,4 +246,16 @@ class ModelCustomers {
             })
         });
     }
+    filterByName(input){
+        var regex_input = new RegExp(input, 'i');
+        var result = this.customers;
+        if(!input){
+            return result;
+        } else {
+            result = this.customers.filter((customer) => {
+                return  ( customer.getName().search(regex_input) > -1 ) ;
+            }) 
+            return result;
+        }        
+    }
 }
