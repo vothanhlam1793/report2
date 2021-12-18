@@ -14,6 +14,12 @@ serialize = function(obj, prefix) {
     return str.join("&");
   }
 
+function chuyentiengviet(str) {
+    return str.normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+
 class CretaCustomer {
     constructor(obj){
         this._oUDs = [];
@@ -252,8 +258,10 @@ class ModelCustomers {
         if(!input){
             return result;
         } else {
+            var regexp_input = chuyentiengviet(input);
             result = this.customers.filter((customer) => {
-                return  ( customer.getName().search(regex_input) > -1 ) ;
+                var regexp_customer_name = chuyentiengviet(customer.getName());
+                return  ( regexp_customer_name.search(regex_input) > -1 ) ;
             }) 
             return result;
         }        
