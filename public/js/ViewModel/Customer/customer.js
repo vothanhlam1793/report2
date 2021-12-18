@@ -14,6 +14,12 @@ serialize = function(obj, prefix) {
     return str.join("&");
   }
 
+function chuyentiengviet(str) {
+    return str.normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+
 class CretaCustomer {
     constructor(obj){
         this._oUDs = [];
@@ -245,5 +251,19 @@ class ModelCustomers {
                 that.customers.push(c);
             })
         });
+    }
+    filterByName(input){
+        var regex_input = new RegExp(input, 'i');
+        var result = this.customers;
+        if(!input){
+            return result;
+        } else {
+            var regexp_input = chuyentiengviet(input);
+            result = this.customers.filter((customer) => {
+                var regexp_customer_name = chuyentiengviet(customer.getName());
+                return  ( regexp_customer_name.search(regex_input) > -1 ) ;
+            }) 
+            return result;
+        }        
     }
 }
