@@ -103,8 +103,8 @@ class ModelCustomerTask extends Task {
         })
     }
     delete_task = () => {
-        this.destroy({success: function(){
-
+        this.destroy({success: () =>{
+            this.onUpdateData();
         }})
     }
     getType = () => {
@@ -115,27 +115,22 @@ class ModelCustomerTask extends Task {
 class ModelTasks {
     constructor(query){
         this.query = query;
-        this.tasks = [];
-        // var that = this;
-        // that.tasks = [];
-        // console.log(serialize(query));
-        // $.get("/api/tasks?" + serialize(query), function(data){
-        //     data.forEach(function(e){
-        //         that.tasks.push(new ModelCustomerTask(e));
-        //         // console.log(that.tasks);
-        //     })
-        // })
-    }
-    init(){
         var that = this;
         that.tasks = [];
+        console.log(serialize(query));
+        $.get("/api/tasks?" + serialize(query), function(data){
+            data.forEach(function(e){
+                that.tasks.push(new ModelCustomerTask(e));
+                console.log(that.tasks);
+            })
+        })
+    }
+    init(){
         $.get("/api/tasks?" + serialize(this.query), function(data){
             data.forEach(function(e){
                 that.tasks.push(new ModelCustomerTask(e));
-                
-                // this.onUpdateData();
+                this.onUpdateData();
             })
-            console.log(that.tasks);
         })
     }
     
@@ -175,7 +170,8 @@ class ModelCustomer {
         if( attribute == "code" ){
             if(this.customer.code){
                 return this.customer.code;
-            }            
+            }
+            
         }
         
         if( this.customer.kiot[attribute] ){
