@@ -128,7 +128,6 @@ class ModelTasks {
         $.get("/api/tasks?" + serialize(this.query), function(data){
             data.forEach(function(e){
                 that.tasks.push(new ModelCustomerTask(e));
-                this.onUpdateData();
             })
         })
     }
