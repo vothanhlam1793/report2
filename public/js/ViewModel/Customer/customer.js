@@ -117,11 +117,9 @@ class ModelTasks {
         this.query = query;
         var that = this;
         that.tasks = [];
-        console.log(serialize(query));
         $.get("/api/tasks?" + serialize(query), function(data){
             data.forEach(function(e){
                 that.tasks.push(new ModelCustomerTask(e));
-                console.log(that.tasks);
             })
         })
     }
