@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <%- include('../header.ejs') %>
+        <script src="/js/ViewModel/Customer/backbone.js"></script>
+        <script src="/js/ViewModel/Customer/customer.js"></script>
+        <script src="/js/ViewComponent/Customer/customer.js"></script>
+    </head>
+    <body class="container-fluid">
+        <div id="app">
+            <create-customer-note-v2 :code="customerModel.getCode()" :customer="customerModel" :task_model="new ModelCustomerTask({title: customerModel.getCode(), type: 'NHAC_GOI_HANG'})"></create-customer-note-v2>
+            <customer-notes-v2 :code="customerModel.getCode()" :customer="customerModel" :query="{ title: customerModel.getCode(), type: 'NHAC_GOI_HANG' }"></customer-notes-v2>
+        </div>
+        <script>
+            var app_invoice_dashboard = new Vue({
+                el: "#app",
+                data: {
+                    input_name: "",
+                    customerModel : new ModelCustomer("KH000163")
+                },
+                methods: {
+
+                },
+                created(){
+                    this.customerModel.fetch();
+                }
+            })
+        </script>
+    </body>
+</html>

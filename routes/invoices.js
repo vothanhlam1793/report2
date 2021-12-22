@@ -28,4 +28,8 @@ router.get('/summary', (req, res) => {
     res.render("invoices/summary");
 });
 
+router.get('/demo', (req, res) => {
+    res.render("invoices/demo");
+})
+
 module.exports = router;
