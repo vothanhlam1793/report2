@@ -7,15 +7,15 @@
     </head>
     <body class="container-fluid">
         <div id="app">
-            <create-customer-note-v2 :code="customerModel.getCode()" :customer="customerModel" :task_model="new ModelCustomerTask({title: customerModel.getCode(), type: 'NHAC_GOI_HANG'})"></create-customer-note-v2>
-            <customer-notes-v2 :code="customerModel.getCode()" :customer="customerModel" :query="{ title: customerModel.getCode(), type: 'NHAC_GOI_HANG' }"></customer-notes-v2>
+            <create-customer-note-v2 :code="customerModel.getCode()" :customer="customerModel" :task_model="new ModelCustomerTask({ title: customerModel.getCode(), type: 'MINH_TEST'})"></create-customer-note-v2>
+            <customer-notes-v2 :code="customerModel.getCode()" :customer="customerModel" type="MINH_TEST"></customer-notes-v2>
         </div>
         <script>
             var app_invoice_dashboard = new Vue({
                 el: "#app",
                 data: {
                     input_name: "",
-                    customerModel : new ModelCustomer("KH000163")
+                    customerModel : new ModelCustomer("KH000136")
                 },
                 methods: {
 

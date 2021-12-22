@@ -103,8 +103,8 @@ class ModelCustomerTask extends Task {
         })
     }
     delete_task = () => {
-        this.destroy({success: () =>{
-            this.onUpdateData();
+        this.destroy({success: function(){
+
         }})
     }
     getType = () => {
@@ -115,20 +115,27 @@ class ModelCustomerTask extends Task {
 class ModelTasks {
     constructor(query){
         this.query = query;
-        var that = this;
-        that.tasks = [];
-        $.get("/api/tasks?" + serialize(query), function(data){
-            data.forEach(function(e){
-                that.tasks.push(new ModelCustomerTask(e));
-            })
-        })
+        this.tasks = [];
+        // var that = this;
+        // that.tasks = [];
+        // console.log(serialize(query));
+        // $.get("/api/tasks?" + serialize(query), function(data){
+        //     data.forEach(function(e){
+        //         that.tasks.push(new ModelCustomerTask(e));
+        //         // console.log(that.tasks);
+        //     })
+        // })
     }
     init(){
+        var that = this;
+        that.tasks = [];
         $.get("/api/tasks?" + serialize(this.query), function(data){
             data.forEach(function(e){
                 that.tasks.push(new ModelCustomerTask(e));
-                this.onUpdateData();
+                
+                // this.onUpdateData();
             })
+            console.log(that.tasks);
         })
     }
     
@@ -166,7 +173,9 @@ class ModelCustomer {
 
     get = ( attribute ) => {
         if( attribute == "code" ){
-            return this.customer.code;
+            if(this.customer.code){
+                return this.customer.code;
+            }            
         }
         
         if( this.customer.kiot[attribute] ){
@@ -187,7 +196,7 @@ class ModelCustomer {
         return this.get("debt") || 0;
     }
     getCode = () => {
-        return this.get("code");
+        return this.get("code") || "";
     }
 }
 

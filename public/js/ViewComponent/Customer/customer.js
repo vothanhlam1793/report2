@@ -163,10 +163,10 @@ Vue.component("create-customer-note-v2", {
 })
 
 Vue.component("customer-notes-v2", {
-    props: ['code', 'customer', 'query'],
+    props: ['code', 'customer', 'type'],
     data: function(){
         return {
-            tasksModel: new ModelTasks(this.query),
+            tasks_model: new ModelTasks({title: this.code, type: this.type}),
             // customerModel: new ModelCustomer({ code: this.code })
         }
     },
@@ -181,7 +181,7 @@ Vue.component("customer-notes-v2", {
             <table class="table table-bordered">
 
                 <tbody>
-                    <tr v-for="(taskModel, index) in tasksModel.tasks">
+                    <tr v-for="(taskModel, index) in tasks_model.tasks">
                         <td>{{ index + 1 }}</td>
                         <td>{{ taskModel.get("description") }}</td>
                         <td><button class="btn btn-success" @click="taskModel.complete_task()" :disabled="(taskModel.get('status') == 'DONE') ? true : false ">{{ (taskModel.get('status') == "DONE") ? "Đã hoàn thành" : "Hoàn thành"}}</button></td>
@@ -192,10 +192,7 @@ Vue.component("customer-notes-v2", {
         </div>
     `,
     created(){
-        // this.customerModel.fetch();
-        // this.tasksModel.onUpdateData = this.onUpdateData;
-        // this.tasksModel.tasks.forEach( (taskModel) => {
-        //     taskModel._oUDs.push(tasksModel.init())
-        // })
+        // console.log(this.tasks_model); 
+        this.tasks_model.init();
     }
 })
