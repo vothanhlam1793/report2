@@ -193,6 +193,6 @@ Vue.component("customer-notes-v2", {
     `,
     created(){
         // console.log(this.tasks_model); 
-        this.tasks_model.init();
+        // this.tasks_model.init();
     }
 })
