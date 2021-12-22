@@ -551,7 +551,7 @@
                     open_box: function(){
                         // console.log("Here");
                         // console.log(jQuery("#modal"+this.code));
-                        jQuery("#modal-send-invoice-sms" + this.code).toggle();
+                        jQuery("#modal-send-invoice-sms" + this.code.substring(0,8)).toggle();
                         // if(!this.customer.code){
                         //     var that = this;
                         //     $.get("/creta/customer/"+this.code, function(data){
@@ -564,7 +564,7 @@
                 <div>
                     <button class="btn btn-info" @click="open_box()">Gửi SMS <span class="badge badge-light">{{ msg_count }}</span></button>
                     <!-- The Modal -->
-                    <div class="modal" :id="'modal-send-invoice-sms'+code">
+                    <div class="modal" :id="'modal-send-invoice-sms'+code.substring(0,8)">
                         <div class="modal-dialog modal-lg">
                             <div class="modal-content">
                             <!-- Modal Header -->
