@@ -37,7 +37,7 @@
                             <td>{{ customer.getLastDate() }}</td>
                             <td>{{ customer.getDebt() }}</td>
                             <td class="row">
-                                <create-customer-note-v2 :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode(), type: 'NHAC_GOI_HANG'})" class="m-1"></create-customer-note-v2>
+                                <create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode(), type: 'NHAC_GOI_HANG'})" class="m-1"></create-customer-note>
                                 <create-customer-note-v2 :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({ title: customer.getCode(), type: 'GHI_CHU_KHACH_HANG'})" class="m-1"></create-customer-note-v2>
                             </td>
                         </tr>

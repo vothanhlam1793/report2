@@ -28,7 +28,7 @@ Vue.component("create-customer-note", {
     },
     template: `
         <div>
-            <button class="btn btn-info" @click="open_box()">Thêm ghi chú</button>
+            <button class="btn btn-info" @click="open_box()">Ghi chú đơn</button>
             <!-- The Modal -->
             <div class="modal" :id="'modal-create-customer-task'+code">
                 <div class="modal-dialog">
@@ -129,7 +129,7 @@ Vue.component("create-customer-note-v2", {
     },
     template: `
         <div>
-            <button class="btn btn-info" @click="open_box()">{{ task_model.getType() }}</button>
+            <button class="btn btn-primary" @click="open_box()">Ghi chú KH</button>
             <!-- The Modal -->
             <div class="modal" :id="'modal-create-customer-task' + task_model.getType() + code">
                 <div class="modal-dialog">
