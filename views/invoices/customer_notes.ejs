@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <%- include('../header.ejs') %>
+        <script src="/js/ViewModel/Customer/backbone.js"></script>
+        <script src="/js/ViewModel/Customer/customer.js"></script>
+        <script src="/js/ViewComponent/Customer/customer.js"></script>
+    </head>
+    <body class="container-fluid">
+        <h1 class="m-1">GHI CHÚ KHÁCH HÀNG</h1>
+        <div id="app">
+            <create-customer-note-v2 :code="customerModel.getCode()" :customer="customerModel" :task_model="new ModelCustomerTask({ title: customerModel.getCode(), type: 'GHI_CHU_KHACH_HANG'})"></create-customer-note-v2>
+            <customer-notes-v2 :code="customerModel.getCode()" :customer="customerModel" type="GHI_CHU_KHACH_HANG"></customer-notes-v2>
+        </div>
+        <script>
+            const urlSearchParams = new URLSearchParams(window.location.search);
+            const params = Object.fromEntries(urlSearchParams.entries());
+            if(!params.code){
+                alert("Mã hóa đơn không được để trống");
+            }
+            var app_invoice_dashboard = new Vue({
+                el: "#app",
+                data: {
+                    input_name: "",
+                    customerModel : new ModelCustomer(params.code )
+                },
+                methods: {
+
+                },
+                created(){
+                    this.customerModel.fetch();
+                }
+            })
+        </script>
+    </body>
+</html>

@@ -32,4 +32,7 @@ router.get('/demo', (req, res) => {
     res.render("invoices/demo");
 })
 
+router.get('/customer_notes', (req, res) => {
+    res.render("invoices/customer_notes");
+})
 module.exports = router;

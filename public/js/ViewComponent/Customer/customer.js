@@ -118,7 +118,7 @@ Vue.component("create-customer-note-v2", {
         open_box: function(){
             // console.log("Here");
             // console.log(jQuery("#modal"+this.code));
-            jQuery("#modal-create-customer-task"+this.code).toggle();
+            jQuery("#modal-create-customer-task"+this.task_model.getType()+this.code).toggle();
             // if(!this.customer.code){
             //     var that = this;
             //     $.get("/creta/customer/"+this.code, function(data){
@@ -129,9 +129,9 @@ Vue.component("create-customer-note-v2", {
     },
     template: `
         <div>
-            <button class="btn btn-info" @click="open_box()">Thêm ghi chú</button>
+            <button class="btn btn-info" @click="open_box()">{{ task_model.getType() }}</button>
             <!-- The Modal -->
-            <div class="modal" :id="'modal-create-customer-task'+code">
+            <div class="modal" :id="'modal-create-customer-task' + task_model.getType() + code">
                 <div class="modal-dialog">
                     <div class="modal-content">
                     <!-- Modal Header -->
