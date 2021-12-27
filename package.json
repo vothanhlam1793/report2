@@ -14,6 +14,7 @@
     "jade": "~1.11.0",
     "mongoose": "^6.0.13",
     "morgan": "~1.9.1",
+    "multer-gridfs-storage": "^5.0.2",
     "node-fetch": "^2.6.6",
     "puppeteer": "^11.0.0"
   }

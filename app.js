@@ -45,6 +45,7 @@ app.use("/customer", customerRouter);
 app.use("/invoices", invoicesRouter);
 app.use("/task", require("./routes/task"));
 app.use("/finance", require("./routes/finance"));
+app.use("/images", require("./routes/upload"));
 require("./app/routes/task.route")(app);
 require("./app/routes/customer.route")(app);
 require("./app/routes/invoice.route")(app);
@@ -63,14 +64,15 @@ require("./app/routes/campaign.route")(app);
 // });
 
 // error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
+// app.use(function(err, req, res, next) {
+//   // set locals, only providing error in development
+//   res.locals.message = err.message;
+//   res.locals.error = req.app.get('env') === 'development' ? err : {};
+
+//   // render the error page
+//   res.status(err.status || 500);
+//   res.render('error');
+// });
 
 module.exports = app;

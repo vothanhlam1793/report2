@@ -1,10 +1,15 @@
 <html>
     <head>
         <%- include("../header.ejs"); %>
+        <script src="/js/upload.js"></script>
     </head>
     <body>
         <%- include("../menu.ejs"); %>
+
         <div class="container-fluid" id="app-index-crm">
+            <div>
+                <upload-file id="123" @from-child='parent'></upload-file>
+            </div>
             <div v-if="init">
                 <p>Đang tạo dữ liệu</p>
             </div>
@@ -160,6 +165,9 @@
                     },
                     numberWithCommas: function (x) {
                         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                    },
+                    parent: function(data){
+                        console.log("PARENT",data);
                     }
                 },
                 created: function(){
