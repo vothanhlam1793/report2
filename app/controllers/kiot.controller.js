@@ -1,5 +1,6 @@
 var CustomerKiot = require("../models/kiot.model").CustomerKiot;
 var InvoiceKiot = require("../models/kiot.model").InvoiceKiot;
+var ProductKiot = require("../models/kiot.model").ProductKiot;
 exports.getCustomer = function(req, res){
     if(!req.params.code){
         return res.status(500).send({
@@ -45,6 +46,31 @@ exports.getAllInvoice = function(req, res){
         });
     } else {
         invoice.fetchAll().then(data => {
+            res.send(data);
+        });
+    }
+}
+
+exports.getProduct = function(req, res){
+    if(!req.params.code){
+        return res.status(500).send({
+            message: "Query with /api/kiot/products/<code>"
+        });
+    }
+    var product = new ProductKiot(req.params.code);    
+    product.fetch().then(data=>{
+        res.send(data);
+    });
+}
+
+exports.getAllProduct = function(req, res){
+    var product = new ProductKiot();
+    if(req.query.new){
+        product.fetchAll(true).then(data => {
+            res.send(data);
+        });
+    } else {
+        product.fetchAll().then(data => {
             res.send(data);
         });
     }

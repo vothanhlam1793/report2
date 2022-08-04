@@ -13,6 +13,12 @@ module.exports = app => {
 
     // Get all invoices
     router.get("/invoices", controllers.getAllInvoice);
+
+    // Get a product
+    router.get("/products/:code", controllers.getProduct);
+
+    // Get all products
+    router.get("/products", controllers.getAllProduct);
     
     // Create a new
     // router.post("/", controllers.create);

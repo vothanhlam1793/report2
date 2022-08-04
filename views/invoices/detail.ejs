@@ -45,7 +45,7 @@
                     <tbody>
                         <tr v-for="product in invoiceModel.invoice_kiot.invoiceDetails">
                             <td><input type="checkbox" class="form-control" @change="changeInvoiceProductCheck(invoiceModel.invoice_kiot.code, product.productCode)"></td>
-                            <td>{{ product.productName }}</td>
+                            <td>{{ product.productName }}<br><br><view-image :code="product.productCode" :product="product"></view-image></td>
                             <td>{{ product.quantity }}</td>
                             <td><save-barcodes-product :invoice_code="invoiceModel.invoice_kiot.code" :product_code="product.productCode"></save-barcodes-product></td>
                         </tr>
@@ -1084,6 +1084,101 @@
                     this.productBarcodesModel.onUpdateData = this.onUpdateData;
                     this.init_component()                
                     // this.productBarcodesModel.initProductBarcodes(this.productCode, this.invoiceCode);
+                }
+            })
+        </script>
+        <script>
+            Vue.component('view-image', {
+                props: ['code', 'product'],
+                template: `
+                    <div>
+                        <button class="btn btn-warning" @click="openImage()">Hình ảnh</button>
+                        <div>
+                            <div class="modal" :id="'myModal' + code">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+
+                                    <!-- Modal Header -->
+                                    <div class="modal-header">
+                                        <h4 class="modal-title">{{product.productName}}</h4>
+                                        <button type="button" class="close" data-dismiss="modal" @click="closeImage()">&times;</button>
+                                    </div>
+
+                                    <!-- Modal body -->
+                                    <div class="modal-body">
+                                        <div v-if="srcImages.length == 0">
+                                            <p>Không có hình ảnh</p>
+                                        </div>
+                                        <div v-else>
+                                            <img :src="srcImages[index]" class="img-thumbnail" :alt="product.productName">
+                                            <div class="row my-3">
+                                                <div class="col text-center">
+                                                    <button v-if="index == 0" class="btn btn-warning" @click="chose(-1)" disabled> < </button>
+                                                    <button v-else class="btn btn-warning" @click="chose(-1)"> < </button> | 
+                                                    <button v-if="index == srcImages.length - 1" class="btn btn-warning" @click="chose(1)" disabled> > </button>    
+                                                    <button v-else class="btn btn-warning" @click="chose(1)"> > </button>    
+                                                </div>    
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Modal footer -->
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-danger" @click="closeImage()">Đóng</button>
+                                    </div>
+
+                                    </div>
+                                </div>
+                            </div>    
+                        </div>
+                    </div>
+                `,
+                data(){
+                    return {
+                        srcImages: [],
+                        index: 0
+                    }
+                },
+                methods: {
+                    openImage(){
+                        jQuery("#myModal" + this.$props.code).show();
+                        this.loadImage();
+                    },
+                    closeImage(){
+                        jQuery("#myModal" + this.$props.code).hide();
+                    },
+                    loadImage(){
+                        var that = this;
+                        $.ajax({
+                            url: "/api/kiot/products/" + this.$props.code,
+                            method: "GET",
+                            success: (data) => {
+                                if(data.images){
+                                    that.srcImages = data.images
+                                }
+                            }
+                        })
+                    },
+                    chose(d){
+                        if((this.index == 0) && (d < 0)){
+                            return;
+                        } 
+                        if((this.index == this.srcImages.length - 1) && (d > 0)){
+                            return;
+                        }
+                        this.index += d;
+
+
+                        if(this.index == 0){
+                            // Disable prev
+                        
+                        }
+
+                        if(this.index == this.srcImages.length - 1){
+                            // Disable next
+
+                        }
+                    }
                 }
             })
         </script>
