@@ -73,25 +73,10 @@ class CretaCustomers {
     }
 }
 
-// class ModelTask {
-//     constructor(obj){
-//         this.oUDs = [];
-//         this.task = new Task(obj);        
-//     }
-//     onUpdateData = () => {
-//         this._oUDs.forEach(function(e){
-//             if(typeof e == "function"){
-//                 e();
-//             }
-//         });
-//     }
-// }
-
 class ModelCustomerTask extends Task {
     constructor(obj){
         super(obj);
         this._oUDs = [];
-        this.set("type", "NHAC_GOI_HANG");
     }
     onUpdateData = () => {
         this._oUDs.forEach(function(e){
@@ -122,6 +107,9 @@ class ModelCustomerTask extends Task {
             this.onUpdateData();
         }})
     }
+    getType = () => {
+        return this.get("type") || "";
+    }
 }
 
 class ModelTasks {
@@ -136,10 +124,10 @@ class ModelTasks {
         })
     }
     init(){
+        var that = this;
         $.get("/api/tasks?" + serialize(this.query), function(data){
             data.forEach(function(e){
                 that.tasks.push(new ModelCustomerTask(e));
-                this.onUpdateData();
             })
         })
     }
@@ -147,42 +135,6 @@ class ModelTasks {
 
 }
 
-// class ModelViewTasks extends ModelTasks {
-//     create_task = (title, description, type) => {
-//         var that = this;
-//         var task = new Task();
-//         task.set("title", title);
-//         task.set("description", description);
-//         task.set("type", type);
-        
-//         task.save({}, {
-//             success: function(r, e){
-//                 that.initTasks(title);
-//             }
-//         })
-//     }
-//     complete_task = (task_id, title) => {
-//         var that = this;
-//         var task = new Task({id: task_id});
-//         task.set("status", "DONE");
-//         task.save({}, {
-//             success: function(r, e){
-//                 that.initTasks(title);
-//             }
-//         })
-//     }
-//     delete_task = (task_id, title) => {
-//         var that = this;
-//         // console.log("deleting...")
-//         var task = new Task({id: task_id});
-//         task.destroy({
-//             success: function(r, e){
-//                 // alert("SUCCESS!");
-//                 that.initTasks(title);
-//             }
-//         })
-//     }
-// }
 
 class ModelCustomer {
     constructor(code_or_object){
@@ -214,7 +166,10 @@ class ModelCustomer {
 
     get = ( attribute ) => {
         if( attribute == "code" ){
-            return this.customer.code;
+            if(this.customer.code){
+                return this.customer.code;
+            }
+            
         }
         
         if( this.customer.kiot[attribute] ){
@@ -235,7 +190,7 @@ class ModelCustomer {
         return this.get("debt") || 0;
     }
     getCode = () => {
-        return this.get("code");
+        return this.get("code") || "";
     }
 }
 

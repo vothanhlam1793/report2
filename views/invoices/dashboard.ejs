@@ -33,10 +33,13 @@
                     </template> -->
                     <template>
                         <tr v-for="customer in customersModel.filterByName(input_name)">
-                            <td>{{ customer.getName() }}</td>
+                            <td><a :href="'/invoices/customer_notes?code=' + customer.getCode()">{{ customer.getName() }}</a></td>
                             <td>{{ customer.getLastDate() }}</td>
                             <td>{{ customer.getDebt() }}</td>
-                            <td><create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode()})"></create-customer-note></td>
+                            <td class="row">
+                                <create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode(), type: 'NHAC_GOI_HANG'})" class="m-1"></create-customer-note>
+                                <create-customer-note-v2 :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({ title: customer.getCode(), type: 'GHI_CHU_KHACH_HANG'})" class="m-1"></create-customer-note-v2>
+                            </td>
                         </tr>
                     </template>
                 </tbody>

@@ -58,11 +58,6 @@ require("./app/routes/transaction.route")(app);
 require("./app/routes/productBarcode.route")(app);
 require("./app/routes/campaign.route")(app);
 
-// catch 404 and forward to error handler
-// app.use(function(req, res, next) {
-//   next(createError(404));
-// });
-
 // error handler
 
 // app.use(function(err, req, res, next) {

@@ -69,7 +69,7 @@ var customers = [];
 var invoices = [];
 async function getFullCustomer(pNew) {
     if(pNew){
-        var data = await getFull("https://public.kiotapi.com/customers?includeTotal=1&includeCustomerSocial=1");
+        var data = await getFull("https://public.kiotapi.com/customers?includeTotal=1&includeCustomerSocial=1&includeCustomerGroup=1");
         customers = data;
     }
     return customers;
@@ -77,6 +77,7 @@ async function getFullCustomer(pNew) {
 async function getFullInvoice(pNew) {
     if(pNew){
         var data = await getFull("https://public.kiotapi.com/invoices?lastModifiedFrom=2021-09-15T00:00:00");
+        // console.log(data);
         invoices = data.filter(function(invoice){
             return invoice.status != 2;
         })

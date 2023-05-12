@@ -123,14 +123,18 @@
                         <thead>
                             <tr>
                                 <th>Tên</th>
+                                <th>Cấp độ</th>
+                                <th>Sale</th>
                                 <th>Mua cuối</th>
                                 <th>Nợ</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="customer in customersTable">
+                            <tr v-for="customer in customersTable" :class="getColor(customer)">
                                 <td>{{customer.name}}</td>
+                                <td>{{getLevel(customer.groups)}}</td>
+                                <td>{{getNameSale(customer.groups)}}</td>
                                 <td>{{customer.lastBuy.split("T")[0]}}</td>
                                 <td>{{numberWithCommas(customer.debt)}}</td>
                                 <td><modal-set-group :code="customer.code"></modal-set-group></td>
@@ -166,8 +170,63 @@
                     numberWithCommas: function (x) {
                         return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
                     },
-                    parent: function(data){
-                        console.log("PARENT",data);
+                    getNameSale(gs){
+                        g = gs.split("|");
+                        var n = "";
+                        g.forEach(function(s){
+                            switch(s){
+                                case "DINH": {
+                                    n =  "DINH";
+                                    return;
+                                }
+                                case "TRANG": {
+                                    n = "TRANG";
+                                    return;
+                                }
+                                case "TRINH": {
+                                    n = "TRINH";
+                                    return;
+                                }
+                                case "NO_SALE": {
+                                    n = 'NO_SALE';
+                                    return;
+                                }
+                            }
+                        })
+                        return n;
+                    },
+                    getLevel(gs){
+                        var g = gs.split("|");
+                        var n = "";
+                        g.forEach(function(e){
+                            if(e.substring(0,2) == "L_"){
+                                n = e.substring(2, e.length);
+                            }
+                        });
+                        return n;
+                    },
+                    getColor(cus){
+                        var n = this.getLevel(cus.groups);
+                        switch(n){
+                            case "DAI_LY": {
+                                return "table-info"    
+                            }
+                            case "VIP_3": {
+                                return "table-success"
+                            }
+                            case "VIP_2": {
+                                return "table-primary"
+                            }
+                            case "VIP_1": {
+                                return "table-warning"
+                            }
+                            case "SUPER_VIP": {
+                                return "table-danger"
+                            }
+                            default: {
+                                return "";
+                            }
+                        }
                     }
                 },
                 created: function(){
