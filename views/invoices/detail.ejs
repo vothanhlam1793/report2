@@ -1,6 +1,7 @@
 <html>
   <head>
     <%- include('../header.ejs') %>
+
     <script>
       var Invoice = Backbone.Model.extend({
         urlRoot: '/api/invoices'
@@ -66,12 +67,10 @@
               </td>
               <td>{{ product.quantity }}</td>
               <td>
-                <button
-                  class="btn btn-info"
-                  @click="goToBarcode(invoiceModel.invoice_kiot.code, product.productCode)"
-                >
-                  Quét Barcode
-                </button>
+                <save-barcodes-product
+                  :invoice_code="invoiceModel.invoice_kiot.code"
+                  :product_code="product.productCode"
+                ></save-barcodes-product>
               </td>
             </tr>
           </tbody>
@@ -88,7 +87,7 @@
       function connect() {
         //var ws = new WebSocket("wss://dir.creta.work/public/messagepublish");
         // console.log("aaaa");
-        var ws = new WebSocket('ws://svr3.creta.vn:1888/scan_barcode')
+        var ws = new WebSocket('ws://node.creta.work:1888/scan_barcode')
         ws.onopen = function () {
           // subscribe to some channels
           console.log('opened')
@@ -507,9 +506,6 @@
           }
         },
         methods: {
-          goToBarcode: function (invoiceCode, productCode) {
-            window.location.href = `/barcode/${invoiceCode}/${productCode}`
-          },
           get_package_count: function () {
             // console.log(this.code);
             var that = this
@@ -1100,210 +1096,103 @@
               this.product_code,
               this.invoice_code
             ),
-            new_barcode: '',
-            isModalOpen: false,
-            scanner: null,
-            cameras: [], // Danh sách camera
-            selectedCameraId: null // ID camera được chọn
+            new_barcode: ''
           }
         },
         methods: {
+          init_component: function () {
+            // console.log(this.invoice_code, this.product_code);
+          },
           onUpdateData: function () {
             this.$forceUpdate()
           },
           delete_barcode: function (barcode) {
-            if (!barcode.trim()) return
-            this.productBarcodesModel.deleteInvoiveProductBarcode(
-              this.invoice_code,
-              this.product_code,
-              barcode
-            )
-            this.productBarcodesModel.invoiceProductBarcodes =
-              this.productBarcodesModel.invoiceProductBarcodes.filter(
-                item => item.code !== barcode
-              )
-          },
-          add_barcode: function () {
-            if (!this.new_barcode.trim()) return
-
-            if (
-              this.productBarcodesModel.invoiceProductBarcodes.some(
-                item => item.code === this.new_barcode
-              )
-            ) {
-              alert('Barcode đã tồn tại!')
-              return
-            }
-
-            this.productBarcodesModel.addInvoiceProductBarcode(
-              this.invoice_code,
-              this.product_code,
-              this.getName(
+            if (barcode.length == 0) {
+              // console.log("barcode ko duoc de trong");
+            } else {
+              this.productBarcodesModel.deleteInvoiveProductBarcode(
+                this.invoice_code,
                 this.product_code,
-                this.productBarcodesModel.invoiceKiot
-              ),
-              this.new_barcode
-            )
-
-            this.productBarcodesModel.invoiceProductBarcodes.push({
-              code: this.new_barcode
-            })
-
-            this.new_barcode = ''
+                barcode
+              )
+            }
+          },
+          add_barcode: function (barcode) {
+            if (barcode.length == 0) {
+              // console.log("barcode ko duoc de trong");
+            } else {
+              this.productBarcodesModel.addInvoiceProductBarcode(
+                this.invoice_code,
+                this.product_code,
+                this.getName(
+                  this.product_code,
+                  this.productBarcodesModel.invoiceKiot
+                ),
+                barcode
+              )
+            }
           },
           getName: function (productCode, invoice) {
-            return (
-              invoice.invoiceDetails?.find(
-                product => product.productCode === productCode
-              )?.productName || ''
-            )
-          },
-          toggleModal: function () {
-            this.isModalOpen = !this.isModalOpen
-            this.$nextTick(() => {
-              if (this.isModalOpen) {
-                this.initScanner()
-                this.getCameraList()
-              } else {
-                this.stopScanner()
-              }
-            })
-          },
-          async getCameraList() {
-            try {
-              const devices = await navigator.mediaDevices.enumerateDevices()
-              this.cameras = devices.filter(
-                device => device.kind === 'videoinput'
-              )
-
-              if (this.cameras.length > 0) {
-                this.selectedCameraId = this.cameras[0].deviceId // Chọn camera đầu tiên mặc định
-              }
-            } catch (error) {
-              console.error('Lỗi khi lấy danh sách camera:', error)
+            var result = ''
+            if (invoice.invoiceDetails) {
+              invoice.invoiceDetails.forEach(product => {
+                if (product.productCode == productCode) {
+                  result = product.productName
+                }
+              })
             }
+            return result
           },
-          initScanner: function () {
-            if (typeof Html5QrcodeScanner === 'undefined') {
-              console.error(
-                'Html5QrcodeScanner is not loaded. Ensure the script is included.'
-              )
-              return
-            }
-            if (this.scanner) return
-
-            this.scanner = new Html5QrcodeScanner('reader', {
-              fps: 5,
-              qrbox: { width: 400, height: 100 }
-            })
-
-            this.scanner.render(this.onScanSuccess.bind(this))
+          // View Functions Only
+          open_box: function () {
+            jQuery(
+              '#modal-save-barcodes-product' + this.product_code.substring(0, 8)
+            ).show()
+            f1 = this.add_barcode
           },
-          startScanner() {
-            // Nếu đã có scanner đang chạy, dừng trước khi khởi tạo mới
-            if (this.scanner) {
-              this.stopScanner()
-            }
-
-            if (!this.selectedCameraId) {
-              alert('Không tìm thấy camera.')
-              return
-            }
-
-            // Điều chỉnh kích thước vùng quét (tối ưu cho barcode)
-            const screenWidth = window.innerWidth
-            const qrBoxSize = { width: screenWidth * 0.7, height: 10 }
-            //   screenWidth > 768
-            //     ? { width: 350, height: 80 } // Desktop: Rộng nhưng thấp
-            //     : { width: screenWidth * 0.7, height: 80 } // Mobile: Rộng vừa, cao thấp hơn
-
-            // Tạo scanner mới
-            this.scanner = new Html5Qrcode('reader')
-
-            this.scanner.start(
-              this.selectedCameraId,
-              {
-                fps: 10,
-                qrbox: qrBoxSize,
-                aspectRatio: 4, // Barcode thường dài hơn
-                disableFlip: true,
-                formatsToSupport: [
-                  Html5QrcodeSupportedFormats.CODE_128,
-                  Html5QrcodeSupportedFormats.EAN_13
-                ] // Chỉ quét barcode
-              },
-              this.onScanSuccess.bind(this),
-              errorMessage => {
-                console.warn('QR Scan Error:', errorMessage)
-              }
-            )
-          },
-          stopScanner() {
-            if (this.scanner) {
-              this.scanner
-                .stop()
-                .then(() => {
-                  this.scanner.clear()
-                  this.scanner = null
-                })
-                .catch(err => console.error('Lỗi khi dừng scanner:', err))
-            }
-          },
-          onScanSuccess: function (decodedText) {
-            if (
-              this.productBarcodesModel.invoiceProductBarcodes.some(
-                item => item.code === decodedText
-              )
-            ) {
-              //   alert('Barcode đã tồn tại!')
-              return
-            }
-            this.new_barcode = decodedText
-            this.add_barcode()
+          close_box: function () {
+            jQuery(
+              '#modal-save-barcodes-product' + this.product_code.substring(0, 8)
+            ).hide()
+            f1 = function () {}
           }
         },
         template: `
-    <div>
-      <button class="btn btn-info" @click="toggleModal">
-        Nhập code <span class="badge badge-light">{{ productBarcodesModel.invoiceProductBarcodes.length }}</span>
-      </button>
-
-      <div v-if="isModalOpen" class="modal fade show d-block">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h4 class="modal-title">{{ invoice_code }} - {{ getName(product_code, productBarcodesModel.invoiceKiot) }}</h4>
-              <button type="button" class="close" @click="toggleModal">&times;</button>
-            </div>
-            <div class="modal-body">
-              <label>Chọn camera:</label>
-              <select v-model="selectedCameraId" class="form-control mb-2" @change="startScanner">
-                <option v-for="camera in cameras" :key="camera.deviceId" :value="camera.deviceId">
-                  {{ camera.label || 'Camera ' + (cameras.indexOf(camera) + 1) }}
-                </option>
-              </select>
-              <div id="reader"></div>
-              <div v-for="(barcode, index) in productBarcodesModel.invoiceProductBarcodes" :key="index" class="alert alert-info text-center">
-                <strong>{{ barcode.code }}</strong>
-                <button class="btn btn-danger btn-sm ml-2" @click="delete_barcode(barcode.code)">&times;</button>
-              </div>
-              <div>
-                <strong>Nhập tay:</strong>
-                <input class="form-control" v-model="new_barcode" @keyup.enter="add_barcode">
-                <button class="btn btn-warning mt-2" @click="add_barcode">Thêm</button>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-danger" @click="toggleModal">Close</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+                    <div>
+                        <button class="btn btn-info" @click="open_box()">Nhập code <span class="badge badge-light">{{ productBarcodesModel.invoiceProductBarcodes.length }}</span> </button>
+                        <!-- The Modal -->
+                        <div class="modal" :id="'modal-save-barcodes-product' + product_code.substring(0,8)">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <!-- Modal Header -->
+                                    <div class="modal-header ">
+                                        <h4 class="modal-title">{{ invoice_code }} - {{ getName(product_code, productBarcodesModel.invoiceKiot) }}</h4>
+                                        <button type="button" @click="close_box()">&times;</button>
+                                    </div>
+                                    <!-- Modal body -->
+                                    <div class="modal-body">
+                                        <div v-for="barcode in productBarcodesModel.invoiceProductBarcodes" class="text-center alert alert-info">
+                                            <strong>{{ barcode.code }}</strong> <button @click="delete_barcode(barcode.code)">&times;</button>
+                                        </div>
+                                        
+                                        <div>
+                                            <strong>Nhập tay: </strong><input class="form-control" v-model="new_barcode" @keyup.enter="add_barcode(new_barcode)">
+                                            <button class="btn btn-warning" @click="add_barcode(new_barcode)">Thêm</button>
+                                        </div>
+                                    </div>
+                                    <!-- Modal footer -->
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-danger" @click="close_box()">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `,
         created() {
           this.productBarcodesModel.onUpdateData = this.onUpdateData
-          this.getCameraList() // Lấy danh sách camera ngay khi khởi tạo
+          this.init_component()
+          // this.productBarcodesModel.initProductBarcodes(this.productCode, this.invoiceCode);
         }
       })
     </script>
@@ -1416,9 +1305,6 @@
           },
           turn_back: function () {
             window.history.back()
-          },
-          goToBarcode: function (invoiceCode, productCode) {
-            window.location.href = `/invoices/barcode/${invoiceCode}/${productCode}`
           }
         },
         created() {
