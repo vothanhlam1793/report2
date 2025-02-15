@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <% if (typeof title === "undefined") { var title = "Chưa đặt tiêu đề"; } %>
+    <title><%= title %></title>
+
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+
+    <!-- Tải các thư viện từ CDN để cải thiện tốc độ -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuex@3.6.2/dist/vuex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.13.1/underscore-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.0/backbone-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- Tailwind CSS tải ở chế độ async -->
+    <script src="https://cdn.tailwindcss.com" async></script>
+
+    <!-- Truyền dữ liệu vào JavaScript -->
+    <script>
+      var invoiceCode = '<%= invoiceCode %>'
+      var productCode = '<%= productCode %>'
+    </script>
+
+    <!-- Các file script cục bộ -->
+    <script src="/js/models.js"></script>
+    <script src="/js/support.js"></script>
+    <script src="/js/component.js"></script>
+  </head>
+
+  <body class="bg-gray-100">
+    <div id="barcodeApp">
+      <barcode-view
+        :invoice_code="invoiceCode"
+        :product_code="productCode"
+      ></barcode-view>
+    </div>
+
+    <!-- JavaScript chính của trang Barcode -->
+    <script src="/js/detailInvoice2.js"></script>
+    <script src="/js/barcodeApp2.js"></script>
+  </body>
+</html>

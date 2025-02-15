@@ -8,6 +8,11 @@ router.get('/detail', (req, res) => {
   res.render('invoices/detail')
 })
 
+router.get('/barcode/:invoiceCode/:productCode', (req, res) => {
+  const { invoiceCode, productCode } = req.params
+  res.render('invoices/barcode', { invoiceCode, productCode })
+})
+
 router.get('/dashboard', (req, res) => {
   res.render('invoices/dashboard')
 })
