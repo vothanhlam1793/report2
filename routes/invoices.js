@@ -9,7 +9,8 @@ router.get('/detail', (req, res) => {
 })
 
 router.get('/barcode/:invoiceCode/:productCode', (req, res) => {
-  res.render('invoices/barcode')
+  const { invoiceCode, productCode } = req.params
+  res.render('invoices/barcode', { invoiceCode, productCode })
 })
 
 router.get('/dashboard', (req, res) => {

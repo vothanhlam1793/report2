@@ -1,198 +1,49 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <%- include('../header.ejs') %>
+    <% if (typeof title === "undefined") { var title = "Chưa đặt tiêu đề"; } %>
+    <title><%= title %></title>
+
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+
+    <!-- Tải các thư viện từ CDN để cải thiện tốc độ -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuex@3.6.2/dist/vuex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.13.1/underscore-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.0/backbone-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-      .barcode-list {
-        list-style-type: none;
-        padding: 0;
-      }
-      .barcode-item {
-        background: #f8f9fa;
-        padding: 10px;
-        margin: 5px 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-radius: 5px;
-      }
-      .barcode-item button {
-        background: red;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        cursor: pointer;
-      }
-    </style>
+
+    <!-- Tailwind CSS tải ở chế độ async -->
+    <script src="https://cdn.tailwindcss.com" async></script>
+
+    <!-- Truyền dữ liệu vào JavaScript -->
+    <script>
+      var invoiceCode = '<%= invoiceCode %>'
+      var productCode = '<%= productCode %>'
+    </script>
+
+    <!-- Các file script cục bộ -->
+    <script src="/js/models.js"></script>
+    <script src="/js/support.js"></script>
+    <script src="/js/component.js"></script>
   </head>
-  <body>
-    <%- include("../menu.ejs"); %>
 
-    <div class="container">
-      <h2 id="invoice-title">Đang tải hóa đơn...</h2>
-      <p><strong>Mã hóa đơn:</strong> <span id="invoice-code"></span></p>
-      <p><strong>Mã sản phẩm:</strong> <span id="product-code"></span></p>
-      <p><strong>Tên sản phẩm:</strong> <span id="product-name"></span></p>
-
-      <h3>Quét Barcode</h3>
-      <div id="reader" class="scanner-container"></div>
-
-      <h4>Danh sách barcode đã quét:</h4>
-      <ul id="barcode-list" class="barcode-list"></ul>
-
-      <h4>Nhập barcode bằng tay:</h4>
-      <input
-        type="text"
-        id="manual-barcode"
-        class="form-control"
-        placeholder="Nhập barcode rồi nhấn Enter"
-      />
-
-      <button class="btn btn-primary mt-2" onclick="window.history.back()">
-        Quay lại
-      </button>
+  <body class="bg-gray-100">
+    <div id="barcodeApp">
+      <barcode-view
+        :invoice_code="invoiceCode"
+        :product_code="productCode"
+      ></barcode-view>
     </div>
 
-    <script>
-      $(document).ready(async function () {
-        const pathParts = window.location.pathname.split('/')
-        const invoiceCode = pathParts[2]
-        const productCode = pathParts[3]
-
-        $('#invoice-code').text(invoiceCode)
-        $('#product-code').text(productCode)
-        $('#invoice-title').text(`Hóa đơn: ${invoiceCode}`)
-
-        let productBarcodeData = {}
-
-        // 🛠 Lấy danh sách barcode từ `infos`
-        async function loadBarcodes() {
-          try {
-            const response = await fetch(
-              `/api/productBarcodes?productCode=${productCode}`
-            )
-            productBarcodeData = await response.json()
-
-            $('#barcode-list').empty()
-
-            if (productBarcodeData.length > 0 && productBarcodeData[0].infos) {
-              productBarcodeData[0].infos.forEach(info => {
-                $('#barcode-list').append(`
-                  <li class="barcode-item">
-                    <span>${info.code}</span>
-                    <button onclick="deleteBarcode('${info.code}')">X</button>
-                  </li>
-                `)
-              })
-            }
-          } catch (error) {
-            console.error('Lỗi khi tải barcode:', error)
-          }
-        }
-        loadBarcodes()
-
-        // 🛠 Thêm barcode vào `infos`
-        async function addBarcode(barcode) {
-          try {
-            if (productBarcodeData.length === 0) {
-              // Nếu productBarcode chưa tồn tại, tạo mới với `infos` chứa barcode đầu tiên
-              await fetch('/api/productBarcodes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  productCode,
-                  invoiceCode,
-                  infos: [{ code: barcode, date: new Date().toISOString() }]
-                })
-              })
-            } else {
-              // Nếu productBarcode đã có, cập nhật `infos`
-              let updatedInfos = productBarcodeData[0].infos || []
-
-              if (updatedInfos.some(info => info.code === barcode)) {
-                alert('Barcode đã tồn tại!')
-                return
-              }
-
-              updatedInfos.push({
-                code: barcode,
-                date: new Date().toISOString()
-              })
-
-              await fetch(`/api/productBarcodes/${productBarcodeData[0].id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  productCode,
-                  invoiceCode,
-                  infos: updatedInfos
-                })
-              })
-            }
-
-            alert('Barcode đã được lưu!')
-            loadBarcodes()
-          } catch (error) {
-            console.error('Lỗi khi lưu barcode:', error)
-          }
-        }
-
-        // 🛠 Xóa barcode trong `infos`
-        window.deleteBarcode = async function (barcode) {
-          try {
-            if (productBarcodeData.length > 0) {
-              let updatedInfos = productBarcodeData[0].infos.filter(
-                info => info.code !== barcode
-              )
-
-              await fetch(`/api/productBarcodes/${productBarcodeData[0].id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  productCode,
-                  invoiceCode,
-                  infos: updatedInfos
-                })
-              })
-
-              alert('Barcode đã bị xóa!')
-              loadBarcodes()
-            }
-          } catch (error) {
-            console.error('Lỗi khi xóa barcode:', error)
-          }
-        }
-
-        // 🛠 Xử lý nhập barcode bằng tay
-        $('#manual-barcode').keypress(function (e) {
-          if (e.which == 13) {
-            const barcode = $(this).val().trim()
-            if (barcode) {
-              addBarcode(barcode)
-              $(this).val('')
-            }
-          }
-        })
-
-        // 🛠 Khởi động scanner
-        const scanner = new Html5Qrcode('reader')
-        scanner.start(
-          { facingMode: 'environment' },
-          {
-            fps: 10,
-            qrbox: { width: 300, height: 80 },
-            aspectRatio: 4,
-            disableFlip: true
-          },
-          function (decodedText) {
-            addBarcode(decodedText)
-          },
-          function (errorMessage) {
-            console.warn('QR Scan Error:', errorMessage)
-          }
-        )
-      })
-    </script>
+    <!-- JavaScript chính của trang Barcode -->
+    <script src="/js/detailInvoice2.js"></script>
+    <script src="/js/barcodeApp2.js"></script>
   </body>
 </html>
