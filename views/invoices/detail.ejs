@@ -1202,9 +1202,9 @@
             this.scanner.render(this.onScanSuccess.bind(this))
           },
           startScanner() {
+            // Nếu đã có scanner đang chạy, dừng trước khi khởi tạo mới
             if (this.scanner) {
-              this.scanner.clear()
-              this.scanner = null
+              this.stopScanner()
             }
 
             if (!this.selectedCameraId) {
@@ -1212,13 +1212,14 @@
               return
             }
 
-            // Điều chỉnh kích thước quét
+            // Điều chỉnh kích thước vùng quét (tối ưu cho barcode)
             const screenWidth = window.innerWidth
             const qrBoxSize =
               screenWidth > 768
-                ? { width: 400, height: 100 } // Desktop
-                : { width: screenWidth * 0.6, height: 60 } // Mobile nhỏ hơn
+                ? { width: 400, height: 120 } // Desktop (Rộng hơn cho barcode)
+                : { width: screenWidth * 0.7, height: 100 } // Mobile
 
+            // Tạo scanner mới
             this.scanner = new Html5Qrcode('reader')
 
             this.scanner.start(
@@ -1226,8 +1227,12 @@
               {
                 fps: 10,
                 qrbox: qrBoxSize,
-                aspectRatio: 1.5,
-                disableFlip: true
+                aspectRatio: 2.5, // Barcode thường có tỷ lệ dài hơn
+                disableFlip: true,
+                formatsToSupport: [
+                  Html5QrcodeSupportedFormats.CODE_128,
+                  Html5QrcodeSupportedFormats.EAN_13
+                ] // Chỉ quét barcode
               },
               this.onScanSuccess.bind(this),
               errorMessage => {
@@ -1235,7 +1240,8 @@
               }
             )
           },
-          stopScanner: function () {
+
+          stopScanner() {
             if (this.scanner) {
               this.scanner
                 .stop()
