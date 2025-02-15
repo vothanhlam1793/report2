@@ -65,32 +65,64 @@ async function getFull(_url){
     return rData;
 }
 
+// Dữ liệu sau khi lấy hàng loạt sẽ được lưu ở đây 100%
 var customers = [];
 var invoices = [];
+
 async function getFullCustomer(pNew) {
+    // Lấy dữ liệu với số lượng lớn
     if(pNew){
+        // Khi nào đúng thì nó mới tải lại hàng loạt rồi gởi ra
         var data = await getFull("https://public.kiotapi.com/customers?includeTotal=1&includeCustomerSocial=1&includeCustomerGroup=1");
         customers = data;
     }
     return customers;
 }
+
+var dateCounter = ((new Date()).getTime() - 86400*1000*90);
+var dateCounterLast = 0;
+var dateCounterCounter = 0;
 async function getFullInvoice(pNew) {
     if(pNew){
-        var data = await getFull("https://public.kiotapi.com/invoices?lastModifiedFrom=2021-09-15T00:00:00");
-        // console.log(data);
-        invoices = data.filter(function(invoice){
+        if(dateCounterCounter == 0){
+            dateCounterCounter += 1;
+        } else {
+            dateCounter = dateCounterLast;
+        }
+        var data = await getFull(`https://public.kiotapi.com/invoices?lastModifiedFrom=${(new Date(dateCounter)).toISOString()}`);
+        dateCounterLast = (new Date()).getTime();
+        data.forEach(function(inv1){
+            var temp = false;
+
+            invoices.forEach(function(inv2){
+                if(inv1.code == inv2.code){
+                    inv2.status = inv1.status;
+                    temp = true;
+                }
+            });
+            if(temp == false){
+                invoices.push(inv1);
+            }
+        });
+        invoices = invoices.filter(function(invoice){
             return invoice.status != 2;
         })
         // invoices = data;
     }
     return invoices;
 }
+console.log("Đây là chỗ tải lần đầu");
 getFullCustomer(true);
 getFullInvoice(true);
+
+// Định kỳ nó phải lấy hết data của kiotviet để cập nhật - nó hơi ngu học thì phải :v
+setInterval(function(){
+    getFullInvoice(true);
+}, 2*60000);
 setInterval(function(){
     getFullCustomer(true);
-    getFullInvoice(true);
-}, 10*60000);
+}, 120*60000);
+
 module.exports.getKiotViet = getKiotViet;
 module.exports.getFull = getFull;
 module.exports.getFullCustomer = getFullCustomer;
