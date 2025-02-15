@@ -1,13 +1,6 @@
 <html>
   <head>
     <%- include('../header.ejs') %>
-
-    <style>
-      .modal-body {
-        max-height: 70vh; /* 70% chiều cao của màn hình */
-        overflow-y: auto; /* Cho phép cuộn nếu nội dung quá dài */
-      }
-    </style>
     <script>
       var Invoice = Backbone.Model.extend({
         urlRoot: '/api/invoices'
@@ -73,10 +66,12 @@
               </td>
               <td>{{ product.quantity }}</td>
               <td>
-                <save-barcodes-product
-                  :invoice_code="invoiceModel.invoice_kiot.code"
-                  :product_code="product.productCode"
-                ></save-barcodes-product>
+                <button
+                  class="btn btn-info"
+                  @click="goToBarcode(invoiceModel.invoice_kiot.code, product.productCode)"
+                >
+                  Quét Barcode
+                </button>
               </td>
             </tr>
           </tbody>
@@ -512,6 +507,9 @@
           }
         },
         methods: {
+          goToBarcode: function (invoiceCode, productCode) {
+            window.location.href = `/barcode/${invoiceCode}/${productCode}`
+          },
           get_package_count: function () {
             // console.log(this.code);
             var that = this
@@ -1214,10 +1212,10 @@
 
             // Điều chỉnh kích thước vùng quét (tối ưu cho barcode)
             const screenWidth = window.innerWidth
-            const qrBoxSize =
-              screenWidth > 768
-                ? { width: 400, height: 120 } // Desktop (Rộng hơn cho barcode)
-                : { width: screenWidth * 0.7, height: 100 } // Mobile
+            const qrBoxSize = { width: screenWidth * 0.7, height: 10 }
+            //   screenWidth > 768
+            //     ? { width: 350, height: 80 } // Desktop: Rộng nhưng thấp
+            //     : { width: screenWidth * 0.7, height: 80 } // Mobile: Rộng vừa, cao thấp hơn
 
             // Tạo scanner mới
             this.scanner = new Html5Qrcode('reader')
@@ -1227,7 +1225,7 @@
               {
                 fps: 10,
                 qrbox: qrBoxSize,
-                aspectRatio: 2.5, // Barcode thường có tỷ lệ dài hơn
+                aspectRatio: 4, // Barcode thường dài hơn
                 disableFlip: true,
                 formatsToSupport: [
                   Html5QrcodeSupportedFormats.CODE_128,
@@ -1240,7 +1238,6 @@
               }
             )
           },
-
           stopScanner() {
             if (this.scanner) {
               this.scanner
@@ -1419,6 +1416,9 @@
           },
           turn_back: function () {
             window.history.back()
+          },
+          goToBarcode: function (invoiceCode, productCode) {
+            window.location.href = `/invoices/barcode/${invoiceCode}/${productCode}`
           }
         },
         created() {
