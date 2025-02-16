@@ -42,12 +42,19 @@ router.get("/serial", function(req, res){
   // res.render("external/check", {
   //   title: "Check serial"
   // })
+
 });
 
+
+router.get("/test", function(req, res){
+  res.render("test");
+})
 var dss = require("./adapter/dss");
 router.get("/checkSerial", async (req, res)=>{
   var rs = await dss.getSerialDSS(req.query.serial);
   res.send(rs);
 });
+
+
 
 module.exports = router;

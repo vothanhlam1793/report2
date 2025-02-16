@@ -2,114 +2,101 @@ Vue.component('barcode-view', {
   props: ['invoice_code', 'product_code'],
   data() {
     return {
-      productBarcodesModel: new ModelProDuctBarcodes(
-        this.product_code,
-        this.invoice_code
-      ),
+      productBarcodesModel: new ModelProDuctBarcodes(this.product_code, this.invoice_code),
       productBarcodes: [],
       new_barcode: '',
-      isScanning: false, // Trạng thái quét
-      scanner: null // Đối tượng scanner
-    }
+      isScanning: false,
+      scanner: null
+    };
   },
   methods: {
     add_barcode() {
-      if (!this.new_barcode.trim()) return
+      if (!this.new_barcode.trim()) return;
 
       this.productBarcodesModel.addInvoiceProductBarcode(
         this.invoice_code,
         this.product_code,
         this.getName(),
         this.new_barcode.trim()
-      )
+      );
 
-      console.log('Barcode added:', this.new_barcode)
-      this.new_barcode = ''
+      console.log('Barcode added:', this.new_barcode);
+      this.new_barcode = '';
 
-      // Cập nhật danh sách barcode ngay lập tức
-      this.refreshProductBarcodes()
+      this.refreshProductBarcodes();
 
-      // Focus lại input
-      this.$nextTick(() => this.$refs.barcodeInput.focus())
+      this.$nextTick(() => this.$refs.barcodeInput.focus());
     },
     delete_barcode(barcode) {
-      this.productBarcodesModel.deleteInvoiveProductBarcode(
-        this.invoice_code,
-        this.product_code,
-        barcode
-      )
-      console.log('Barcode deleted:', barcode)
+      this.productBarcodesModel.deleteInvoiveProductBarcode(this.invoice_code, this.product_code, barcode);
+      console.log('Barcode deleted:', barcode);
 
-      // Cập nhật danh sách barcode ngay lập tức
-      this.refreshProductBarcodes()
+      this.refreshProductBarcodes();
     },
     getName() {
-      return (
-        this.productBarcodesModel.invoiceKiot?.invoiceDetails?.find(
-          p => p.productCode === this.product_code
-        )?.productName || 'Không xác định'
-      )
+      return this.productBarcodesModel.invoiceKiot?.invoiceDetails?.find(
+        p => p.productCode === this.product_code
+      )?.productName || 'Không xác định';
     },
     refreshProductBarcodes() {
-      this.productBarcodesModel.getProductBarcodeByProductCode(
-        this.product_code,
-        this.invoice_code
-      )
+      this.productBarcodesModel.getProductBarcodeByProductCode(this.product_code, this.invoice_code);
     },
     startScanning() {
       if (this.isScanning) {
-        this.stopScanning()
-        return
+        this.stopScanning();
+        return;
       }
 
-      this.isScanning = true
+      this.isScanning = true;
 
-      // Chờ Vue cập nhật DOM xong mới khởi tạo scanner
       this.$nextTick(() => {
         if (!this.scanner) {
-          this.scanner = new Html5Qrcode('barcode-scanner')
+          this.scanner = new Html5Qrcode("barcode-scanner");
         }
 
-        this.scanner.start(
-          { facingMode: 'environment' }, // Camera sau
-          {
-            fps: 10,
-            qrbox: 250
-          },
-          decodedText => {
-            console.log('Scanned barcode:', decodedText)
-            this.new_barcode = decodedText
-            this.add_barcode() // Tự động thêm barcode sau khi quét
-            this.stopScanning()
-          },
-          errorMessage => {
-            console.warn('Scan error:', errorMessage)
-          }
-        )
-      })
+        // Kiểm tra quyền truy cập camera trước khi mở scanner
+        navigator.mediaDevices.getUserMedia({ video: true }).then(() => {
+          this.scanner.start(
+            { facingMode: { exact: "environment" } }, // Mở camera sau trên iOS
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 }
+            },
+            decodedText => {
+              console.log("Scanned barcode:", decodedText);
+              this.new_barcode = decodedText;
+              this.add_barcode();
+              this.stopScanning();
+            },
+            errorMessage => {
+              console.warn("Scan error:", errorMessage);
+            }
+          );
+        }).catch(err => {
+          alert("Không thể mở camera. Hãy kiểm tra quyền truy cập.");
+          console.error("Camera error:", err);
+          this.isScanning = false;
+        });
+      });
     },
     stopScanning() {
       if (this.scanner) {
-        this.scanner
-          .stop()
-          .then(() => {
-            console.log('Scanner stopped')
-          })
-          .catch(err => {
-            console.warn('Error stopping scanner:', err)
-          })
+        this.scanner.stop().then(() => {
+          console.log("Scanner stopped");
+        }).catch(err => {
+          console.warn("Error stopping scanner:", err);
+        });
       }
-      this.isScanning = false
+      this.isScanning = false;
     }
   },
   mounted() {
     this.productBarcodesModel.onUpdateData = () => {
-      this.productBarcodes = [
-        ...this.productBarcodesModel.invoiceProductBarcodes
-      ]
-    }
+      this.productBarcodes = [...this.productBarcodesModel.invoiceProductBarcodes];
+      this.$forceUpdate(); // Bắt Vue cập nhật UI ngay lập tức
+    };
 
-    this.refreshProductBarcodes()
+    this.refreshProductBarcodes();
   },
   template: `
     <div class="flex flex-col min-h-screen bg-gray-100 p-4">
@@ -157,8 +144,8 @@ Vue.component('barcode-view', {
         </div>
     </div>
   `
-})
+});
 
 new Vue({
   el: '#barcodeApp'
-})
+});

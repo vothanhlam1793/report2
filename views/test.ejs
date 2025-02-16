@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Barcode Scanner - Html5-qrcode</title>
+    <!-- <script src="https://unpkg.com/html5-qrcode"></script> -->
+    <script src="https://raw.githubusercontent.com/mebjas/html5-qrcode/master/minified/html5-qrcode.min.js"></script>
+  </head>
+  <body>
+    <h2>Quét Barcode bằng Camera</h2>
+    <div style="width: 500px" id="reader"></div>
+    <p><strong>Kết quả:</strong> <span id="result"></span></p>
+
+    <script>
+      function onScanSuccess(decodedText, decodedResult) {
+    // Handle on success condition with the decoded text or result.
+    console.log(`Scan result: ${decodedText}`, decodedResult);
+}
+
+var html5QrcodeScanner = new Html5QrcodeScanner(
+	"reader", { fps: 10, qrbox: 250 });
+html5QrcodeScanner.render(onScanSuccess);
+    </script>
+  </body>
+</html>
