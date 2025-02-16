@@ -1,212 +1,150 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>QR & Barcode Scanner</title>
-    <script src="https://unpkg.com/html5-qrcode" defer></script>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        text-align: center;
-        margin: 20px;
-        overflow: hidden;
-      }
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="ZXing for JS" />
 
-      #reader {
-        width: 100%;
-        max-width: 400px;
-        margin: auto;
-        position: relative;
-      }
+    <title>ZXing TypeScript | Decoding from camera stream</title>
 
-      /* 🔥 Giới hạn chiều cao video */
-      video {
-        width: 100%;
-        max-height: 250px;
-        object-fit: cover;
-      }
-
-      /* 🔥 Khung quét - Cố định vào video */
-      .scanner-border {
-        position: absolute;
-        width: 80%;
-        height: 120px;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        border: 4px solid gray;
-        box-shadow: 0 0 15px gray;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 10;
-        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-      }
-
-      /* 🔥 Khi quét thành công -> Nhấp nháy màu xanh */
-      .scanner-success {
-        animation: flash-green 0.5s alternate 3;
-      }
-
-      @keyframes flash-green {
-        0% {
-          border-color: gray;
-          box-shadow: 0 0 15px gray;
-        }
-        50% {
-          border-color: green;
-          box-shadow: 0 0 25px green;
-        }
-        100% {
-          border-color: gray;
-          box-shadow: 0 0 15px gray;
-        }
-      }
-
-      #result {
-        margin-top: 20px;
-        font-weight: bold;
-        font-size: 18px;
-        color: green;
-      }
-
-      /* 🔥 Nút xin phép âm thanh */
-      #enable-sound {
-        margin-top: 15px;
-        padding: 10px 20px;
-        font-size: 16px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        cursor: pointer;
-        border-radius: 5px;
-      }
-
-      #enable-sound:active {
-        background-color: #0056b3;
-      }
-    </style>
+    <link
+      rel="stylesheet"
+      rel="preload"
+      as="style"
+      onload="this.rel='stylesheet';this.onload=null"
+      href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic"
+    />
+    <link
+      rel="stylesheet"
+      rel="preload"
+      as="style"
+      onload="this.rel='stylesheet';this.onload=null"
+      href="https://unpkg.com/normalize.css@8.0.0/normalize.css"
+    />
+    <link
+      rel="stylesheet"
+      rel="preload"
+      as="style"
+      onload="this.rel='stylesheet';this.onload=null"
+      href="https://unpkg.com/milligram@1.3.0/dist/milligram.min.css"
+    />
   </head>
+
   <body>
-    <h1>Quét QR & Barcode</h1>
-    <button id="enable-sound">🔊 Bật Âm Thanh</button>
-    <div id="reader"></div>
-    <p id="result">📌 Kết quả sẽ hiển thị ở đây...</p>
+    <main class="wrapper" style="padding-top: 2em">
+      <section class="container" id="demo-content">
+        <h1 class="title">Scan 1D/2D Code from Video Camera</h1>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function () {
-        let audioContext
-        let beepBuffer
+        <p>
+          <a class="button-small button-outline" href="../../index.html"
+            >HOME 🏡</a
+          >
+        </p>
 
-        // 🔥 Khởi tạo âm thanh nhưng chưa phát
-        async function loadBeepSound() {
-          if (!audioContext) {
-            audioContext = new (window.AudioContext ||
-              window.webkitAudioContext)()
-          }
-          const response = await fetch('/audio/beep-07a.wav')
-          const arrayBuffer = await response.arrayBuffer()
-          beepBuffer = await audioContext.decodeAudioData(arrayBuffer)
-        }
+        <div>
+          <a class="button" id="startButton">Start</a>
+          <a class="button" id="resetButton">Reset</a>
+        </div>
 
-        function playBeep() {
-          if (!audioContext || !beepBuffer) return
-          const source = audioContext.createBufferSource()
-          source.buffer = beepBuffer
-          source.connect(audioContext.destination)
-          source.start(0)
-        }
+        <div>
+          <video
+            id="video"
+            width="640"
+            height="480"
+            style="border: 1px solid gray"
+          ></video>
+        </div>
 
-        // 🔥 Người dùng nhấn nút để kích hoạt âm thanh
-        document
-          .getElementById('enable-sound')
-          .addEventListener('click', async () => {
-            await loadBeepSound()
-            playBeep() // Chạy thử một lần để trình duyệt cấp quyền
-            document.getElementById('enable-sound').style.display = 'none' // Ẩn nút sau khi bật
-          })
+        <div id="sourceSelectPanel" style="display: none">
+          <label for="sourceSelect">Change video source:</label>
+          <select id="sourceSelect" style="max-width: 400px"></select>
+        </div>
 
-        function addScannerBorder() {
-          const scanRegion = document.querySelector('#reader__scan_region')
-          if (scanRegion && !document.querySelector('.scanner-border')) {
-            const scannerBorder = document.createElement('div')
-            scannerBorder.classList.add('scanner-border')
+        <label>Result:</label>
+        <pre><code id="result"></code></pre>
+      </section>
+    </main>
 
-            // 🔥 Ẩn khung quét trên iOS
-            if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-              scannerBorder.style.display = 'none'
+    <script
+      type="text/javascript"
+      src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"
+    ></script>
+    <script type="text/javascript">
+      window.addEventListener('load', function () {
+        let selectedDeviceId
+        const codeReader = new ZXing.BrowserMultiFormatReader()
+        console.log('ZXing code reader initialized')
+
+        codeReader
+          .listVideoInputDevices()
+          .then(videoInputDevices => {
+            const sourceSelect = document.getElementById('sourceSelect')
+            selectedDeviceId = videoInputDevices[0]?.deviceId
+
+            if (videoInputDevices.length >= 1) {
+              videoInputDevices.forEach(device => {
+                const sourceOption = document.createElement('option')
+                sourceOption.text = device.label
+                sourceOption.value = device.deviceId
+                sourceSelect.appendChild(sourceOption)
+              })
+
+              sourceSelect.onchange = () => {
+                selectedDeviceId = sourceSelect.value
+              }
+
+              document.getElementById('sourceSelectPanel').style.display =
+                'block'
             }
 
-            scanRegion.appendChild(scannerBorder)
-          }
-        }
+            document
+              .getElementById('startButton')
+              .addEventListener('click', () => {
+                const videoConstraints = {
+                  deviceId: selectedDeviceId
+                    ? { exact: selectedDeviceId }
+                    : undefined,
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
+                  facingMode: 'environment'
+                }
 
-        // 🔥 Kiểm tra mỗi 500ms nếu khung bị mất thì thêm lại
-        setInterval(addScannerBorder, 500)
+                navigator.mediaDevices
+                  .getUserMedia({ video: videoConstraints })
+                  .then(stream => {
+                    document.getElementById('video').srcObject = stream
+                    codeReader.decodeFromStream(
+                      stream,
+                      'video',
+                      (result, err) => {
+                        if (result) {
+                          console.log(result)
+                          document.getElementById('result').textContent =
+                            result.text
+                        }
+                        if (err && !(err instanceof ZXing.NotFoundException)) {
+                          console.error(err)
+                          document.getElementById('result').textContent = err
+                        }
+                      }
+                    )
+                  })
+                  .catch(err => console.error('Error accessing camera:', err))
 
-        let scanResults = []
-        const STABLE_COUNT = 3 // 🔥 Cần xuất hiện 3 lần giống nhau mới hiển thị
-        let lastScannedText = '' // 🔥 Lưu mã QR cuối cùng để tránh quét liên tục
-        const TIMEOUT_BETWEEN_SCANS = 4000 // 🔥 Thời gian chờ giữa 2 lần quét (ms)
+                console.log(
+                  `Started continuous decode from camera with id ${selectedDeviceId}`
+                )
+              })
 
-        function onScanSuccess(decodedText, decodedResult) {
-          // 🔥 Nếu trùng với lần quét cuối cùng và chưa qua timeout thì bỏ qua
-          if (decodedText === lastScannedText) {
-            return
-          }
-
-          scanResults.push(decodedText)
-
-          // Đếm số lần xuất hiện của mã QR này
-          let count = scanResults.filter(text => text === decodedText).length
-
-          if (count >= STABLE_COUNT) {
-            document.getElementById('result').innerText =
-              '📌 Kết quả: ' + decodedText
-
-            // 🔥 Kích hoạt hiệu ứng nhấp nháy màu xanh
-            const scannerBorder = document.querySelector('.scanner-border')
-            scannerBorder.classList.add('scanner-success')
-
-            // 🔥 Phát âm thanh "tít"
-            playBeep()
-
-            // 🔥 Cập nhật mã cuối cùng đã quét
-            lastScannedText = decodedText
-
-            // 🔥 Sau khi nhấp nháy xong, tự động xóa class để reset
-            setTimeout(() => {
-              scannerBorder.classList.remove('scanner-success')
-            }, 1500)
-
-            // 🔥 Reset lại bộ đếm
-            scanResults = []
-
-            // 🔥 Sau timeout, cho phép quét lại mã này
-            setTimeout(() => {
-              lastScannedText = ''
-            }, TIMEOUT_BETWEEN_SCANS)
-          }
-        }
-
-        function onScanFailure(error) {
-          console.warn(`Lỗi quét: ${error}`)
-        }
-
-        let html5QrcodeScanner = new Html5QrcodeScanner('reader', {
-          fps: 5,
-          qrbox: { width: 350, height: 120 },
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-          videoConstraints: {
-            facingMode: 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
-        })
-
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure)
+            document
+              .getElementById('resetButton')
+              .addEventListener('click', () => {
+                codeReader.reset()
+                document.getElementById('result').textContent = ''
+                console.log('Reset.')
+              })
+          })
+          .catch(err => console.error(err))
       })
     </script>
   </body>

@@ -1,0 +1,81 @@
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 20px;
+  overflow: hidden;
+}
+
+#reader {
+  width: 100%;
+  max-width: 400px;
+  margin: auto;
+  position: relative;
+}
+
+/* 🔥 Giới hạn chiều cao video */
+video {
+  width: 100%;
+  max-height: 250px;
+  object-fit: cover;
+}
+
+/* 🔥 Khung quét - Cố định vào video */
+.scanner-border {
+  position: absolute;
+  width: 80%;
+  height: 120px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 4px solid gray;
+  box-shadow: 0 0 15px gray;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  pointer-events: none;
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+/* 🔥 Khi quét thành công -> Nhấp nháy màu xanh */
+.scanner-success {
+  animation: flash-green 0.5s alternate 3;
+}
+
+@keyframes flash-green {
+  0% {
+    border-color: gray;
+    box-shadow: 0 0 15px gray;
+  }
+  50% {
+    border-color: green;
+    box-shadow: 0 0 25px green;
+  }
+  100% {
+    border-color: gray;
+    box-shadow: 0 0 15px gray;
+  }
+}
+
+#result {
+  margin-top: 20px;
+  font-weight: bold;
+  font-size: 18px;
+  color: green;
+}
+
+/* 🔥 Nút xin phép âm thanh */
+#enable-sound {
+  margin-top: 15px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+#enable-sound:active {
+  background-color: #0056b3;
+}
