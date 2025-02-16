@@ -12,6 +12,7 @@
         margin: 20px;
         overflow: hidden;
       }
+
       #reader {
         width: 100%;
         max-width: 400px;
@@ -19,42 +20,48 @@
         position: relative;
       }
 
-      /* 🔥 Khung quét - Ban đầu là màu xám */
+      /* 🔥 Giới hạn chiều cao video */
+      video {
+        width: 100%;
+        max-height: 250px;
+        object-fit: cover;
+      }
+
+      /* 🔥 Khung quét - Cố định vào video */
       .scanner-border {
-        position: fixed;
+        position: absolute;
+        width: 80%;
+        height: 120px;
         top: 50%;
         left: 50%;
-        width: 350px;
-        height: 150px;
         transform: translate(-50%, -50%);
-        z-index: 99999;
-        pointer-events: none;
         border: 4px solid gray;
         box-shadow: 0 0 15px gray;
-        animation: border-animation 1s infinite alternate;
-        display: block;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
       }
 
-      /* 🔥 Hiệu ứng phát sáng */
-      @keyframes border-animation {
-        from {
-          border-color: gray;
-        }
-        to {
-          border-color: lightgray;
-        }
-      }
-
-      /* 🔥 Khi quét thành công -> Chuyển sang màu xanh */
+      /* 🔥 Khi quét thành công -> Nhấp nháy màu xanh */
       .scanner-success {
-        border-color: green !important;
-        box-shadow: 0 0 20px green !important;
+        animation: flash-green 0.5s alternate 3;
       }
 
-      /* 🔥 Khi quét thất bại -> Chuyển sang màu đỏ */
-      .scanner-fail {
-        border-color: red !important;
-        box-shadow: 0 0 20px red !important;
+      @keyframes flash-green {
+        0% {
+          border-color: gray;
+          box-shadow: 0 0 15px gray;
+        }
+        50% {
+          border-color: green;
+          box-shadow: 0 0 25px green;
+        }
+        100% {
+          border-color: gray;
+          box-shadow: 0 0 15px gray;
+        }
       }
 
       #result {
@@ -63,44 +70,140 @@
         font-size: 18px;
         color: green;
       }
+
+      /* 🔥 Nút xin phép âm thanh */
+      #enable-sound {
+        margin-top: 15px;
+        padding: 10px 20px;
+        font-size: 16px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+      }
+
+      #enable-sound:active {
+        background-color: #0056b3;
+      }
     </style>
   </head>
   <body>
     <h1>Quét QR & Barcode</h1>
+    <button id="enable-sound">🔊 Bật Âm Thanh</button>
     <div id="reader"></div>
-    <div id="scanner-border" class="scanner-border"></div>
-    <!-- 🔥 Khung quét động -->
     <p id="result">📌 Kết quả sẽ hiển thị ở đây...</p>
 
     <script>
       document.addEventListener('DOMContentLoaded', function () {
-        const scannerBorder = document.getElementById('scanner-border')
+        let audioContext
+        let beepBuffer
 
-        // 🔥 Ẩn khung viền trên iOS
-        function isIOS() {
-          return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+        // 🔥 Khởi tạo âm thanh nhưng chưa phát
+        async function loadBeepSound() {
+          if (!audioContext) {
+            audioContext = new (window.AudioContext ||
+              window.webkitAudioContext)()
+          }
+          const response = await fetch('/audio/beep-07a.wav')
+          const arrayBuffer = await response.arrayBuffer()
+          beepBuffer = await audioContext.decodeAudioData(arrayBuffer)
         }
-        if (isIOS()) {
-          scannerBorder.style.display = 'none'
+
+        function playBeep() {
+          if (!audioContext || !beepBuffer) return
+          const source = audioContext.createBufferSource()
+          source.buffer = beepBuffer
+          source.connect(audioContext.destination)
+          source.start(0)
         }
+
+        // 🔥 Người dùng nhấn nút để kích hoạt âm thanh
+        document
+          .getElementById('enable-sound')
+          .addEventListener('click', async () => {
+            await loadBeepSound()
+            playBeep() // Chạy thử một lần để trình duyệt cấp quyền
+            document.getElementById('enable-sound').style.display = 'none' // Ẩn nút sau khi bật
+          })
+
+        function addScannerBorder() {
+          const scanRegion = document.querySelector('#reader__scan_region')
+          if (scanRegion && !document.querySelector('.scanner-border')) {
+            const scannerBorder = document.createElement('div')
+            scannerBorder.classList.add('scanner-border')
+
+            // 🔥 Ẩn khung quét trên iOS
+            if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+              scannerBorder.style.display = 'none'
+            }
+
+            scanRegion.appendChild(scannerBorder)
+          }
+        }
+
+        // 🔥 Kiểm tra mỗi 500ms nếu khung bị mất thì thêm lại
+        setInterval(addScannerBorder, 500)
+
+        let scanResults = []
+        const STABLE_COUNT = 3 // 🔥 Cần xuất hiện 3 lần giống nhau mới hiển thị
+        let lastScannedText = '' // 🔥 Lưu mã QR cuối cùng để tránh quét liên tục
+        const TIMEOUT_BETWEEN_SCANS = 4000 // 🔥 Thời gian chờ giữa 2 lần quét (ms)
 
         function onScanSuccess(decodedText, decodedResult) {
-          document.getElementById('result').innerText =
-            '📌 Kết quả: ' + decodedText
-          scannerBorder.classList.remove('scanner-fail')
-          scannerBorder.classList.add('scanner-success') // 🔥 Chuyển sang màu xanh lá khi quét thành công
+          // 🔥 Nếu trùng với lần quét cuối cùng và chưa qua timeout thì bỏ qua
+          if (decodedText === lastScannedText) {
+            return
+          }
+
+          scanResults.push(decodedText)
+
+          // Đếm số lần xuất hiện của mã QR này
+          let count = scanResults.filter(text => text === decodedText).length
+
+          if (count >= STABLE_COUNT) {
+            document.getElementById('result').innerText =
+              '📌 Kết quả: ' + decodedText
+
+            // 🔥 Kích hoạt hiệu ứng nhấp nháy màu xanh
+            const scannerBorder = document.querySelector('.scanner-border')
+            scannerBorder.classList.add('scanner-success')
+
+            // 🔥 Phát âm thanh "tít"
+            playBeep()
+
+            // 🔥 Cập nhật mã cuối cùng đã quét
+            lastScannedText = decodedText
+
+            // 🔥 Sau khi nhấp nháy xong, tự động xóa class để reset
+            setTimeout(() => {
+              scannerBorder.classList.remove('scanner-success')
+            }, 1500)
+
+            // 🔥 Reset lại bộ đếm
+            scanResults = []
+
+            // 🔥 Sau timeout, cho phép quét lại mã này
+            setTimeout(() => {
+              lastScannedText = ''
+            }, TIMEOUT_BETWEEN_SCANS)
+          }
         }
 
         function onScanFailure(error) {
           console.warn(`Lỗi quét: ${error}`)
-          scannerBorder.classList.remove('scanner-success')
-          scannerBorder.classList.add('scanner-fail') // 🔥 Chuyển sang màu đỏ khi quét thất bại
         }
 
         let html5QrcodeScanner = new Html5QrcodeScanner('reader', {
-          fps: 10,
-          qrbox: { width: 350, height: 150 }, // 🔥 Giữ khung chữ nhật tối ưu Barcode
-          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+          fps: 5,
+          qrbox: { width: 350, height: 120 },
+          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          videoConstraints: {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
         })
 
         html5QrcodeScanner.render(onScanSuccess, onScanFailure)
