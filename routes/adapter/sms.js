@@ -34,19 +34,25 @@ class SMS{
         })).then(data => data.json()).then(data => {
             that.token = data.token;
             that.state = "READY";
-            // setInterval(that.startAuto, that.time || 60000);
+        }).catch(e => {
+            console.warn("[sms] getToken error:", e.message);
         })
     }
     send = async (phone, content) => {
-        var res = await fetch(this.urlQuery({
-            u: this.user,
-            h: this.token,
-            op: "pv",
-            to: phone,
-            msg: content,
-        }));
-        var ret = await res.json();
-        return ret;
+        try {
+            var res = await fetch(this.urlQuery({
+                u: this.user,
+                h: this.token,
+                op: "pv",
+                to: phone,
+                msg: content,
+            }));
+            var ret = await res.json();
+            return ret;
+        } catch(e) {
+            console.error("[sms] send error:", e.message);
+            return { error: e.message };
+        }
     }
     sendQueue = (phone, content) => {
         var t = (new Date()).getTime();
@@ -73,6 +79,8 @@ class SMS{
             that.messages[i].queue = data.data[0].queue;
             that.messages[i].smslog_id = data.data[0].smslog_id;
             that.messages[i].timestamp = data.timestamp;
+        }).catch(e => {
+            console.warn("[sms] _send error:", e.message);
         })
     }
 }

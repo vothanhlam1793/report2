@@ -5,20 +5,18 @@ class Cart {
     }
 }
 
-class Carts {
-    constructor(){
-        var that = this;
-        that.carts = [];
-        fetch("https://creta.vn/api/carts?pass=asrkpvg7").then(data=>data.json()).then(d => {
-            d.forEach(function(e){
-                that.carts.push(new Cart(e));
-            })
-        })
-    }
-}
-
 exports.getAll = async () => {
-    var res = await fetch("https://creta.vn/api/carts?pass=asrkpvg7");
-    var d = await res.json();
-    return d;
+    try {
+        var res = await fetch("https://creta.vn/api/carts?pass=asrkpvg7");
+        var contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+            console.warn("[cart] API không trả JSON, status:", res.status);
+            return [];
+        }
+        var d = await res.json();
+        return d;
+    } catch(e) {
+        console.error("[cart] getAll error:", e.message);
+        return [];
+    }
 }

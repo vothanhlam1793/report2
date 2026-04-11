@@ -8,6 +8,14 @@ var app = require('../app');
 var debug = require('debug')('report:server');
 var http = require('http');
 
+// Prevent unhandled promise rejections from crashing the process
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+});
+
 /**
  * Get port from environment and store in Express.
  */
