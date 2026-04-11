@@ -13,8 +13,6 @@
             <div class="col-9 border">
                 <% if(mainPage == "INFO"){ %>
                     <%- include("info.ejs", {customer: customer}) %>
-                <% } else if (mainPage == "HEATH"){ %>
-                    <%- include("monitor.ejs", {customer: customer}) %>
                 <% } else { %>
                     <%- include("dashboard.ejs") %>
                 <% } %>

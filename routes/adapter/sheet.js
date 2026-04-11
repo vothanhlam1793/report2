@@ -1,8 +1,9 @@
-var url= "https://script.google.com/macros/s/AKfycbyiL1biuCCIp6doX5Ab3d-DwXkHscStGMHezW3bUw9pMJUagyedKRbnmdHPpSr8gwd-/exec";
-var urlMinh = "https://script.google.com/macros/s/AKfycbzd9fmojI-9ecwaxXRapnNs8kthPw6QCSZLf1Z85ttHFfURhehJNxF7_L9qicGpiDZYqA/exec";
-var urlTelesale_Bao = "https://script.google.com/macros/s/AKfycbwnEuKnhbh6-UezE637HNBKLPTbD8yG-yiVtl6iwqkzm-YnujktoiCsbGYrQq8rJOGuwA/exec";
-var urlTelesale_Huy = "https://script.google.com/macros/s/AKfycbzMoHB91SFTbPTNwzrOpiOEqH8rkUOD72hOK9tMTcyJ4uJli-kA0JVDbiYFixr98hyq/exec";
 var fetch = require("node-fetch");
+
+var urlMain         = process.env.SHEET_URL_MAIN         || "";
+var urlMinh         = process.env.SHEET_URL_MINH         || "";
+var urlTelesale_Bao = process.env.SHEET_URL_TELESALE_BAO || "";
+var urlTelesale_Huy = process.env.SHEET_URL_TELESALE_HUY || "";
 
 async function getMinh(){
     console.log(await getSheet(urlTelesale_Huy + "?sheetName=REPORT"));

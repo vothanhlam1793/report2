@@ -5,9 +5,11 @@ var objToken = {
 };
 async function getToken(){
     if(((new Date()).getTime() - objToken.date.getTime()) > 85000*1000){
+        var clientId = process.env.KIOT_CLIENT_ID || '';
+        var clientSecret = process.env.KIOT_CLIENT_SECRET || '';
         var res = await fetch("https://id.kiotviet.vn/connect/token", {
             method: "POST",
-            body: "scopes=PublicApi.Access&grant_type=client_credentials&client_id=bae3bcbe-c860-4bac-9e4a-0651dcf4bad0&client_secret=0D92F5E0DF1973CC5385348F42C665D8775E7468",
+            body: `scopes=PublicApi.Access&grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`,
             headers:{
                 "Content-Type": "application/x-www-form-urlencoded"
             } 
@@ -21,10 +23,11 @@ async function getToken(){
 
 async function getKiotViet(url){
     var token = await getToken();
+    var retailer = process.env.KIOT_RETAILER || 'cretasolu';
     var res = await fetch(url, {
         method: "GET",
         headers: {
-            Retailer: "cretasolu",
+            Retailer: retailer,
             Authorization: token
         }
     });

@@ -3,6 +3,8 @@ var express = require('express')
 var path = require('path')
 var cookieParser = require('cookie-parser')
 var logger = require('morgan')
+var helmet = require('helmet')
+var rateLimit = require('express-rate-limit')
 require('dotenv').config()
 
 var indexRouter = require('./routes/index')
@@ -15,14 +17,17 @@ var app = express()
 
 // KHỞI ĐỘNG DATABASE
 const db = require('./app/models')
+const dbOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}
+if (process.env.MONGO_USER) {
+  dbOptions.user = process.env.MONGO_USER
+  dbOptions.pass = process.env.MONGO_PASS
+  dbOptions.authSource = 'admin'
+}
 db.mongoose
-  .connect(db.url, {
-    user: 'black',
-    pass: 'asrkpvg7',
-    authSource: 'admin',
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
+  .connect(db.url, dbOptions)
   .then(() => {
     console.log('Connected to the database!')
   })
@@ -34,6 +39,15 @@ db.mongoose
 // view engine setup
 app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'ejs')
+
+// Security middleware
+app.use(helmet({ contentSecurityPolicy: false }))
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 phút
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false
+}))
 
 app.use(logger('dev'))
 app.use(express.json())
@@ -61,5 +75,25 @@ require('./app/routes/phieu.route')(app)
 require('./app/routes/transaction.route')(app)
 require('./app/routes/productBarcode.route')(app)
 require('./app/routes/campaign.route')(app)
+
+// 404 handler
+app.use(function (req, res, next) {
+  next(createError(404))
+})
+
+// Global error handler
+app.use(function (err, req, res, next) {
+  const status = err.status || 500
+  const isDev = req.app.get('env') === 'development'
+  res.status(status)
+  // API requests get JSON errors
+  if (req.xhr || req.headers.accept?.includes('application/json')) {
+    return res.json({ error: err.message, status })
+  }
+  res.render('error', {
+    message: err.message,
+    error: isDev ? err : {}
+  })
+})
 
 module.exports = app
