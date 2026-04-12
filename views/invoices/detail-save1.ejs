@@ -18,7 +18,7 @@
             function connect() {
                 //var ws = new WebSocket("wss://dir.creta.work/public/messagepublish");
                 // console.log("aaaa");
-                var ws = new WebSocket("ws://node.creta.work:1888/scan_barcode");
+                var ws = new WebSocket("ws://svr3.creta.vn:1888/scan_barcode");
                 ws.onopen = function() {
                     // subscribe to some channels
                     console.log("opened")
