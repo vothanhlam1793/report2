@@ -1,16 +1,169 @@
 <html>
-    <head>
-        <%- include('../header.ejs') %>
-        <script src="/js/ViewModel/Invoice/backbone.js"></script>
-        <script src="/js/ViewModel/Invoice/invoice.js"></script>
-        <script src="/js/ViewModel/Invoice/productBarcode.js"></script>
-    </head>
-    <body>
+  <head>
+    <%- include('../header.ejs') %>
+    <script src="/js/invoice-status.js"></script>
+  </head>
+  <body>
+    <%- include('../menu.ejs') %>
+    <div id="ship-workspace" class="container py-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            
+          <h1>Giao chành</h1>
+          <p class="text-muted mb-0">Nhóm việc cho các bước B6 và B7.</p>
         </div>
-        <script>
+        <a href="/invoices" class="btn btn-outline-secondary">Quay lại danh sách</a>
+      </div>
 
-        </script>
-    </body>
+      <div class="row mb-3">
+        <div class="col-md-6" v-for="status in shipStatuses" :key="status.key">
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="small text-muted">{{ status.key }}</div>
+              <h5 class="card-title mb-1">{{ status.title }}</h5>
+              <div class="display-4">{{ countByStatus(status.key) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="form-row align-items-end">
+            <div class="col-md-4">
+              <label>Tìm theo mã / khách</label>
+              <input class="form-control" v-model="searchText" placeholder="VD: HD020865 hoặc Anh Duy">
+            </div>
+            <div class="col-md-2">
+              <button class="btn btn-outline-primary btn-block" @click="refreshAll()">Làm mới</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <table class="table table-bordered table-hover">
+            <thead>
+              <tr>
+                <th>Mã HĐ</th>
+                <th>Khách</th>
+                <th>Trạng thái</th>
+                <th>Phiếu / ứng ship</th>
+                <th>Tổng tiền</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="invoice in filteredInvoices" :key="invoice.code">
+                <td><a :href="'/invoices/detail?code=' + invoice.code">{{ invoice.code }}</a></td>
+                <td>{{ invoice.customerName || invoice.customerCode || '-' }}</td>
+                <td><span class="badge" :class="badgeClass(invoice.status)">{{ statusTitle(invoice.status) }}</span></td>
+                <td>{{ phieuCount(invoice.code) }}</td>
+                <td>{{ formatMoney(invoice.total) }}</td>
+                <td>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-primary" @click="changeStatus(invoice, 'B6')">B6</button>
+                    <button class="btn btn-outline-info" @click="changeStatus(invoice, 'B7')">B7</button>
+                    <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + invoice.code">Chi tiết</a>
+                  </div>
+                </td>
+              </tr>
+              <tr v-if="filteredInvoices.length === 0">
+                <td colspan="6" class="text-center text-muted">Không có đơn phù hợp.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function normalizeShipStatus(status) {
+        return window.getInvoiceStatusMeta(status)
+      }
+
+      new Vue({
+        el: '#ship-workspace',
+        data: {
+          invoices: [],
+          invoiceStates: [],
+          phieus: [],
+          searchText: ''
+        },
+        computed: {
+          shipStatuses() {
+            return window.INVOICE_STATUSES.filter(status => ['B6', 'B7'].includes(status.key))
+          },
+          mergedInvoices() {
+            var stateMap = {}
+            this.invoiceStates.forEach(function(record) {
+              stateMap[record.code] = record
+            })
+            return this.invoices.map(function(invoice) {
+              var local = stateMap[invoice.code] || {}
+              return Object.assign({}, invoice, {
+                status: local.status || 'B1',
+                statusInfo: local.statusInfo || window.getInvoiceStatusMeta(local.status || 'B1')
+              })
+            })
+          },
+          filteredInvoices() {
+            var search = this.searchText.trim().toLowerCase()
+            return this.mergedInvoices.filter(invoice => {
+              var statusKey = window.normalizeInvoiceStatus(invoice.status)
+              if (!['B6', 'B7'].includes(statusKey)) {
+                return false
+              }
+              var haystack = [invoice.code, invoice.customerCode, invoice.customerName].join(' ').toLowerCase()
+              return !search || haystack.includes(search)
+            })
+          }
+        },
+        methods: {
+          refreshAll() {
+            $.get('/api/kiot/invoices', data => {
+              this.invoices = data || []
+            })
+            $.get('/api/invoices', data => {
+              this.invoiceStates = data || []
+            })
+            $.get('/api/phieus', data => {
+              this.phieus = data || []
+            })
+          },
+          countByStatus(statusKey) {
+            return this.mergedInvoices.filter(invoice => window.normalizeInvoiceStatus(invoice.status) === statusKey).length
+          },
+          statusTitle(status) {
+            return normalizeShipStatus(status).title
+          },
+          badgeClass(status) {
+            return 'badge-' + normalizeShipStatus(status).style
+          },
+          formatMoney(value) {
+            return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+          },
+          phieuCount(code) {
+            return this.phieus.filter(phieu => phieu.code === code).length || '-'
+          },
+          changeStatus(invoice, statusKey) {
+            var payload = { code: invoice.code, status: statusKey }
+            var existing = this.invoiceStates.find(record => record.code === invoice.code)
+            var request
+            if (existing && existing.id) {
+              request = $.ajax({ url: '/api/invoices/' + existing.id, method: 'PUT', data: payload })
+            } else {
+              request = $.ajax({ url: '/api/invoices', method: 'POST', data: payload })
+            }
+            request.done(() => this.refreshAll())
+          }
+        },
+        created() {
+          var params = new URLSearchParams(window.location.search)
+          this.searchText = params.get('code') || ''
+          this.refreshAll()
+        }
+      })
+    </script>
+  </body>
 </html>

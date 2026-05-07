@@ -1,64 +1,332 @@
-
 <html>
-    <head>
-        <%- include('../header.ejs') %>
-        <script src="/js/ViewModel/Customer/backbone.js"></script>
-        <script src="/js/ViewModel/Customer/customer.js"></script>
-        <script src="/js/ViewComponent/Customer/customer.js"></script>
-    </head>
-    <body class="container-fluid">
-        <%- include("../menu") %>
-        <br><br>
-        <div id="app-invoices-dashboard">
-            <!-- <create-customer-note code="KH000561"></create-customer-note> -->
-            <!-- <customer-notes code="KH000561"></customer-notes> -->
-            <input type="text" v-model="input_name" class="form-control m-2" placeholder="Nhập tên khách hàng...">
-            <table class="table table-bordered m-2" >
+  <head>
+    <%- include('../header.ejs') %>
+    <script src="/js/invoice-status.js"></script>
+  </head>
+  <body>
+    <%- include('../menu.ejs') %>
+    <div id="invoice-dashboard" class="container-fluid py-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h1 class="mb-1">Tổng quan hóa đơn</h1>
+          <p class="text-muted mb-0">Quan sát toàn bộ luồng hóa đơn và điều phối sang các workspace làm việc.</p>
+        </div>
+        <div class="btn-group">
+          <a href="/invoices/prepare" class="btn btn-outline-secondary">Chuẩn bị đơn</a>
+          <a href="/invoices/package" class="btn btn-outline-secondary">Đóng hàng</a>
+          <a href="/invoices/ship" class="btn btn-outline-secondary">Giao chành</a>
+          <a href="/invoices" class="btn btn-outline-secondary">Danh sách hóa đơn</a>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-lg-3 col-md-4 col-sm-6" v-for="status in statuses" :key="status.key">
+          <div class="card mb-3 border-0 shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="small text-muted">{{ status.key }}</div>
+                  <div class="font-weight-bold">{{ status.title }}</div>
+                </div>
+                <span class="badge" :class="badgeClass(status.key)">{{ status.order }}</span>
+              </div>
+              <div class="display-4 mt-2">{{ countByStatus(status.key) }}</div>
+              <button class="btn btn-link p-0 mt-2" @click="selectedStatusKey = status.key">Xem đơn</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-lg-3 col-md-6" v-for="workspace in workspaces" :key="workspace.key">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">{{ workspace.title }}</h5>
+              <p class="text-muted">{{ workspace.description }}</p>
+              <div class="mb-3">
+                <span class="badge badge-light mr-1" v-for="statusKey in workspace.statusKeys" :key="statusKey">
+                  {{ statusKey }}
+                </span>
+              </div>
+              <div class="display-4 mb-3">{{ countForWorkspace(workspace.statusKeys) }}</div>
+              <a class="btn btn-outline-primary mt-auto" :href="workspace.href">Mở workspace</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mb-4">
+        <div class="col-lg-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title">Cảnh báo vận hành</h5>
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Chờ đủ hàng quá 1 ngày
+                  <span class="badge badge-warning">{{ delayedB3.length }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Đã đóng hàng nhưng chưa ra chành
+                  <span class="badge badge-primary">{{ countByStatus('B5') }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  Đã tới chành nhưng chưa xác nhận nhận hàng
+                  <span class="badge badge-info">{{ countByStatus('B7') }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-8">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <div class="alert alert-light border mb-3">
+                <div class="font-weight-bold mb-2">Chu kỳ quan sát</div>
+                <div class="form-row align-items-end">
+                  <div class="col-md-3">
+                    <label>Từ ngày</label>
+                    <input type="date" class="form-control" v-model="fromDate">
+                  </div>
+                  <div class="col-md-3">
+                    <label>Đến ngày</label>
+                    <input type="date" class="form-control" v-model="toDate">
+                  </div>
+                  <div class="col-md-2">
+                    <button class="btn btn-outline-secondary btn-block" @click="setTodayCycle()">Hôm nay</button>
+                  </div>
+                  <div class="col-md-2">
+                    <button class="btn btn-outline-secondary btn-block" @click="setWeekCycle()">7 ngày</button>
+                  </div>
+                  <div class="col-md-2">
+                    <button class="btn btn-outline-secondary btn-block" @click="clearCycle()">Toàn bộ</button>
+                  </div>
+                </div>
+                <small class="text-muted d-block mt-2">
+                  Dashboard sẽ chỉ tính các hóa đơn có ngày đơn nằm trong chu kỳ này.
+                </small>
+              </div>
+
+              <div class="form-row align-items-end mb-3">
+                <div class="col-md-3">
+                  <label>Trạng thái</label>
+                  <select class="form-control" v-model="selectedStatusKey">
+                    <option value="">Tất cả</option>
+                    <option v-for="status in statuses" :value="status.key">{{ status.key }} - {{ status.title }}</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label>Nhóm việc</label>
+                  <select class="form-control" v-model="selectedWorkspaceKey">
+                    <option value="">Tất cả</option>
+                    <option v-for="workspace in workspaces" :value="workspace.key">{{ workspace.title }}</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label>Tìm mã đơn / khách</label>
+                  <input class="form-control" v-model="searchText" placeholder="VD: HD020865 / Anh Duy">
+                </div>
+                <div class="col-md-2">
+                  <button class="btn btn-outline-secondary btn-block" @click="refreshAll()">Làm mới</button>
+                </div>
+              </div>
+
+              <table class="table table-bordered table-hover">
                 <thead>
-                    <tr>
-                        <td>TÊN</td>
-                        <td>MUA CUỐI</td>
-                        <td>NỢ</td>
-                        <td>GHI CHÚ</td>
-                    </tr>
+                  <tr>
+                    <th>Mã HĐ</th>
+                    <th>Khách</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày đơn</th>
+                    <th>Tổng tiền</th>
+                    <th>Điều hướng</th>
+                  </tr>
                 </thead>
                 <tbody>
-                    <!-- <template v-if="input_name == ''">
-                        <tr v-for="customer in customersModel.customers">
-                            <td>{{ customer.getName() }}</td>
-                            <td>{{ customer.getLastDate() }}</td>
-                            <td>{{ customer.getDebt() }}</td>
-                            <td><create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode()})"></create-customer-note></td>
-                        </tr>
-                    </template> -->
-                    <template>
-                        <tr v-for="customer in customersModel.filterByName(input_name)">
-                            <td><a :href="'/invoices/customer_notes?code=' + customer.getCode()">{{ customer.getName() }}</a></td>
-                            <td>{{ customer.getLastDate() }}</td>
-                            <td>{{ customer.getDebt() }}</td>
-                            <td class="row">
-                                <create-customer-note :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({title: customer.getCode(), type: 'NHAC_GOI_HANG'})" class="m-1"></create-customer-note>
-                                <create-customer-note-v2 :code="customer.getCode()" :customer="customer" :task_model="new ModelCustomerTask({ title: customer.getCode(), type: 'GHI_CHU_KHACH_HANG'})" class="m-1"></create-customer-note-v2>
-                            </td>
-                        </tr>
-                    </template>
+                  <tr v-for="invoice in filteredInvoices" :key="invoice.code">
+                    <td><a :href="'/invoices/detail?code=' + invoice.code">{{ invoice.code }}</a></td>
+                    <td>{{ invoice.customerName || invoice.customerCode || '-' }}</td>
+                    <td>
+                      <span class="badge" :class="badgeClass(invoice.status)">{{ statusTitle(invoice.status) }}</span>
+                    </td>
+                    <td>{{ formatDate(invoice.purchaseDate) }}</td>
+                    <td>{{ formatMoney(invoice.total) }}</td>
+                    <td>
+                      <div class="btn-group btn-group-sm">
+                        <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + invoice.code">Chi tiết</a>
+                        <a class="btn btn-outline-secondary" :href="workspaceHref(invoice.status, invoice.code)">Đi làm việc</a>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="filteredInvoices.length === 0">
+                    <td colspan="6" class="text-center text-muted">Không có đơn phù hợp.</td>
+                  </tr>
                 </tbody>
-            </table>
+              </table>
+            </div>
+          </div>
         </div>
-        <script>
-            var app_invoice_dashboard = new Vue({
-                el: "#app-invoices-dashboard",
-                data: {
-                    input_name: "",
-                    customersModel : new ModelCustomers()
-                },
-                methods: {
+      </div>
+    </div>
 
-                },
-                created(){
-                    this.customersModel.fetch();
-                }
+    <script>
+      function getWorkspaceByStatus(statusKey) {
+        if (['B2', 'B3', 'B4'].includes(statusKey)) {
+          return 'prepare'
+        }
+        if (['B4', 'B5'].includes(statusKey)) {
+          return 'package'
+        }
+        if (['B6', 'B7'].includes(statusKey)) {
+          return 'ship'
+        }
+        return 'detail'
+      }
+
+      new Vue({
+        el: '#invoice-dashboard',
+        data: {
+          invoices: [],
+          invoiceStates: [],
+          selectedStatusKey: '',
+          selectedWorkspaceKey: '',
+          searchText: '',
+          fromDate: '',
+          toDate: '',
+          statuses: window.INVOICE_STATUSES,
+          workspaces: [
+            {
+              key: 'prepare',
+              title: 'Chuẩn bị đơn',
+              description: 'Kiểm tra tồn kho, chờ đủ hàng và xác nhận sẵn sàng đóng.',
+              statusKeys: ['B2', 'B3', 'B4'],
+              href: '/invoices/prepare'
+            },
+            {
+              key: 'package',
+              title: 'Đóng hàng',
+              description: 'Theo dõi đơn sẵn sàng đóng và các đơn đã đóng hàng.',
+              statusKeys: ['B4', 'B5'],
+              href: '/invoices/package'
+            },
+            {
+              key: 'ship',
+              title: 'Giao chành',
+              description: 'Điều phối đơn đang giao ra chành và đã tới chành.',
+              statusKeys: ['B6', 'B7'],
+              href: '/invoices/ship'
+            },
+            {
+              key: 'finish',
+              title: 'Hoàn tất',
+              description: 'Theo dõi khách đã nhận và các đơn đã hoàn thành.',
+              statusKeys: ['B8', 'B9'],
+              href: '/invoices'
+            }
+          ]
+        },
+        computed: {
+          mergedInvoices() {
+            var stateMap = {}
+            this.invoiceStates.forEach(function(record) {
+              stateMap[record.code] = record
             })
-        </script>
-    </body>
+            return this.invoices.map(function(invoice) {
+              var local = stateMap[invoice.code] || {}
+              return Object.assign({}, invoice, {
+                status: local.status || 'B1',
+                statusInfo: local.statusInfo || window.getInvoiceStatusMeta(local.status || 'B1')
+              })
+            })
+          },
+          cycleInvoices() {
+            return this.mergedInvoices.filter(invoice => {
+              if (!invoice.purchaseDate) {
+                return !this.fromDate && !this.toDate
+              }
+              var purchaseDay = moment(invoice.purchaseDate).format('YYYY-MM-DD')
+              if (this.fromDate && purchaseDay < this.fromDate) {
+                return false
+              }
+              if (this.toDate && purchaseDay > this.toDate) {
+                return false
+              }
+              return true
+            })
+          },
+          delayedB3() {
+            return this.cycleInvoices.filter(invoice => {
+              if (window.normalizeInvoiceStatus(invoice.status) !== 'B3' || !invoice.purchaseDate) {
+                return false
+              }
+              return moment().diff(moment(invoice.purchaseDate), 'hours') >= 24
+            })
+          },
+          filteredInvoices() {
+            var search = this.searchText.trim().toLowerCase()
+            return this.cycleInvoices.filter(invoice => {
+              var statusKey = window.normalizeInvoiceStatus(invoice.status)
+              var matchesStatus = !this.selectedStatusKey || statusKey === this.selectedStatusKey
+              var workspace = this.workspaces.find(item => item.key === this.selectedWorkspaceKey)
+              var matchesWorkspace = !workspace || workspace.statusKeys.includes(statusKey)
+              var haystack = [invoice.code, invoice.customerCode, invoice.customerName].join(' ').toLowerCase()
+              var matchesSearch = !search || haystack.includes(search)
+              return matchesStatus && matchesWorkspace && matchesSearch
+            })
+          }
+        },
+        methods: {
+          refreshAll() {
+            $.get('/api/kiot/invoices', data => {
+              this.invoices = data || []
+            })
+            $.get('/api/invoices', data => {
+              this.invoiceStates = data || []
+            })
+          },
+          countByStatus(statusKey) {
+            return this.cycleInvoices.filter(invoice => window.normalizeInvoiceStatus(invoice.status) === statusKey).length
+          },
+          countForWorkspace(statusKeys) {
+            return this.cycleInvoices.filter(invoice => statusKeys.includes(window.normalizeInvoiceStatus(invoice.status))).length
+          },
+          badgeClass(status) {
+            return 'badge-' + window.getInvoiceStatusMeta(status).style
+          },
+          statusTitle(status) {
+            return window.getInvoiceStatusMeta(status).title
+          },
+          formatDate(value) {
+            return value ? moment(value).format('DD/MM/YYYY HH:mm') : '-'
+          },
+          formatMoney(value) {
+            return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+          },
+          workspaceHref(status, code) {
+            var workspace = getWorkspaceByStatus(window.normalizeInvoiceStatus(status))
+            if (workspace === 'detail') {
+              return '/invoices/detail?code=' + code
+            }
+            return '/invoices/' + workspace + '?code=' + code
+          },
+          setTodayCycle() {
+            var today = moment().format('YYYY-MM-DD')
+            this.fromDate = today
+            this.toDate = today
+          },
+          setWeekCycle() {
+            this.fromDate = moment().subtract(6, 'days').format('YYYY-MM-DD')
+            this.toDate = moment().format('YYYY-MM-DD')
+          },
+          clearCycle() {
+            this.fromDate = ''
+            this.toDate = ''
+          }
+        },
+        created() {
+          this.setTodayCycle()
+          this.refreshAll()
+        }
+      })
+    </script>
+  </body>
 </html>

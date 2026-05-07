@@ -1,5 +1,6 @@
 const db = require("../models");
 const Model = db.invoices;
+const { normalizeInvoiceStatus, attachInvoiceStatus } = require('../lib/invoiceStatus');
 var nameController = "Invoice";
 
 function createObj (data) {
@@ -8,6 +9,7 @@ function createObj (data) {
     objArray.forEach(function(e){
         a[e] = data[e];
     });
+    a.status = normalizeInvoiceStatus(a.status);
     return a;
 }
 // Create and Save a new Tutorial
@@ -32,7 +34,7 @@ exports.create = (req, res) => {
 exports.findAll = (req, res) => {
     conditional = req.query; //
     Model.find(conditional).then(data => {
-        res.send(data);
+        res.send(data.map(attachInvoiceStatus));
     }).catch(e=>{
         res.status(500).send({
             message: e.message || "Error cannot querry all"
@@ -42,8 +44,8 @@ exports.findAll = (req, res) => {
 
 // Find a single Tutorial with an id
 exports.findOne = (req, res) => {
-    Model.findById(req.params.id).then(data=>{
-        res.send(data);
+Model.findById(req.params.id).then(data=>{
+        res.send(attachInvoiceStatus(data));
     }).catch(e=>{
         res.status(400).send({
             message: e.message || "Cannot query Transaction with id " + req.params.id
@@ -57,6 +59,9 @@ exports.update = (req, res) => {
         return res.status(400).send({
           message: "Data to update can not be empty!"
         });
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'status')) {
+        req.body.status = normalizeInvoiceStatus(req.body.status);
     }
     const id = req.params.id;
     Model.findByIdAndUpdate(id, req.body, {useFindAndModify: false}).then(data=>{
@@ -115,7 +120,7 @@ exports.getByCode = (req, res) => {
     Model.find(conditional).then(data => {
         console.log(data);
         if(data[0]){
-            res.send(data[0]);
+            res.send(attachInvoiceStatus(data[0]));
         }
         else {
             res.send({});

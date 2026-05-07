@@ -260,22 +260,7 @@ Vue.component('change-invoice-status', {
     data: function(){
         return {
             // View
-            statuss: [{
-                title: "Mới lên đơn",
-                value: 1
-            },{
-                title: "Đã soạn hàng",
-                value: 2
-            },{
-                title: "Đã đóng hàng",
-                value: 3
-            },{
-                title: "Đã giao hàng",
-                value: 4
-            },{
-                title: "Khách đã nhận",
-                value: 5
-            }],
+            statuss: window.INVOICE_STATUSES,
 
             // Model
             invoiceModel: new ModelInvoiceStatus(this.code)
@@ -284,8 +269,8 @@ Vue.component('change-invoice-status', {
     methods: {
         // Model - VM Functions
 
-        change_invoice_status: function(status){
-            this.invoiceModel.changeInvoiceStatus(status, this.code);
+        change_invoice_status: function(statusKey){
+            this.invoiceModel.changeInvoiceStatus(statusKey, this.code);
         },
         onUpdateData: function(){
             this.$forceUpdate();
@@ -297,17 +282,11 @@ Vue.component('change-invoice-status', {
         },
 
         compare_value( invoiceValue, value){
-            return (invoiceValue == value);
+            return (window.normalizeInvoiceStatus(invoiceValue) == value);
         },
 
         getTitleByStatus (iStatus){
-            var title = "Mới lên đơn";
-            this.statuss.forEach( (status) => {
-                if(iStatus == status.value){
-                    title = status.title;
-                }
-            })
-            return title;
+            return window.getInvoiceStatusMeta(iStatus).title;
         }
     },
     template: `
@@ -325,7 +304,7 @@ Vue.component('change-invoice-status', {
                         <!-- Modal body -->
                         <div class="modal-body">
                             <div v-for="status in statuss">
-                                <button class="btn btn-block" :class="{ 'btn-info' : (invoiceModel.invoice.status == status.value), 'btn-outline-info' : !(invoiceModel.invoice.status == status.value)}" @click="change_invoice_status(status.value)">{{ status.title }}</button>
+                                <button class="btn btn-block" :class="{ 'btn-info' : compare_value(invoiceModel.invoice.status, status.key), 'btn-outline-info' : !compare_value(invoiceModel.invoice.status, status.key)}" @click="change_invoice_status(status.key)">{{ status.title }}</button>
                             </div>
                             
                         </div>
@@ -509,27 +488,7 @@ Vue.component('change-invoice-status-2', {
     data: function(){
         return {
             // View
-            statuss: [{
-                title: "Mới lên đơn",
-                value: 1,
-                style: "danger"
-            },{
-                title: "Đã soạn hàng",
-                value: 2,
-                style: "warning"
-            },{
-                title: "Đã đóng hàng",
-                value: 3,
-                style: "primary"
-            },{
-                title: "Đã giao hàng",
-                value: 4,
-                style: "info"
-            },{
-                title: "Khách đã nhận",
-                value: 5,
-                style: "success"
-            }],
+            statuss: window.INVOICE_STATUSES,
 
             // Model
             invoiceModel: new ModelInvoiceStatus(this.code)
@@ -538,8 +497,8 @@ Vue.component('change-invoice-status-2', {
     methods: {
         // Model - VM Functions
 
-        change_invoice_status: function(status){
-            this.invoiceModel.changeInvoiceStatus(status, this.code);
+        change_invoice_status: function(statusKey){
+            this.invoiceModel.changeInvoiceStatus(statusKey, this.code);
         },
         onUpdateData: function(){
             this.$forceUpdate();
@@ -551,27 +510,15 @@ Vue.component('change-invoice-status-2', {
         },
 
         compare_value( invoiceValue, value){
-            return (invoiceValue == value);
+            return (window.normalizeInvoiceStatus(invoiceValue) == value);
         },
 
         getTitleByStatus (iStatus){
-            var title = "Mới lên đơn";
-            this.statuss.forEach( (status) => {
-                if(iStatus == status.value){
-                    title = status.title;
-                }
-            })
-            return title;
+            return window.getInvoiceStatusMeta(iStatus).title;
         },
 
         getStyleByStatus (iStatus){
-            var style = "danger";
-            this.statuss.forEach( (status) => {
-                if(iStatus == status.value){
-                    style = status.style;
-                }
-            })
-            return style;
+            return window.getInvoiceStatusMeta(iStatus).style;
         }
     },
     template: `
@@ -590,7 +537,7 @@ Vue.component('change-invoice-status-2', {
                         <!-- Modal body -->
                         <div class="modal-body">
                             <div v-for="status in statuss">
-                                <button class="btn btn-block" :class="{ 'btn-info' : (invoiceModel.invoice.status == status.value), 'btn-outline-info' : !(invoiceModel.invoice.status == status.value)}" @click="change_invoice_status(status.value)">{{ status.title }}</button>
+                                <button class="btn btn-block" :class="{ 'btn-info' : compare_value(invoiceModel.invoice.status, status.key), 'btn-outline-info' : !compare_value(invoiceModel.invoice.status, status.key)}" @click="change_invoice_status(status.key)">{{ status.title }}</button>
                             </div>
                             
                         </div>
