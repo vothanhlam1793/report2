@@ -95,6 +95,7 @@
               <th>Mã tham chiếu</th>
               <th>Mã đơn</th>
               <th>Trạng thái</th>
+              <th>Nhà cung cấp</th>
               <th>Tóm tắt</th>
               <th>Số mã hàng</th>
               <th>Người tạo</th>
@@ -107,6 +108,7 @@
               <td>{{ item.referenceCode || '-' }}</td>
               <td>{{ item.invoiceCode || '-' }}</td>
               <td><span class="badge" :class="statusBadgeClass(item.status)">{{ statusTitle(item.status) }}</span></td>
+              <td>{{ item.supplierName || item.supplierCode || '-' }}</td>
               <td>{{ item.summary || '-' }}</td>
               <td>{{ Array.isArray(item.items) ? item.items.length : 0 }}</td>
               <td>{{ item.createdByName || item.createdByUsername || '-' }}</td>
@@ -120,7 +122,7 @@
               </td>
             </tr>
             <tr v-if="!paginatedItems.length">
-              <td colspan="8" class="text-center text-muted">Chưa có phiếu đặt hàng nhanh.</td>
+              <td colspan="9" class="text-center text-muted">Chưa có phiếu đặt hàng nhanh.</td>
             </tr>
           </tbody>
         </table>
@@ -165,6 +167,11 @@
             <div class="form-group">
               <label>Tóm tắt</label>
               <input class="form-control" v-model="createDraft.summary">
+            </div>
+
+            <div class="form-group">
+              <label>Nhà cung cấp nhập hàng</label>
+              <input class="form-control" v-model="createDraft.supplierName" placeholder="Chọn NCC sau khi tạo phiếu nếu cần nhanh hơn ở bước này">
             </div>
 
             <table class="table table-bordered table-hover mb-0" v-if="createDraft.items.length">
@@ -256,12 +263,16 @@
       pageSize: 30,
       currentPage: 1,
       pageSizes: [10, 20, 30, 50, 100],
-      createDraft: {
-        invoiceCode: '',
-        invoiceStatus: 'B1',
-        summary: 'Tạo nhanh từ danh sách phiếu đặt hàng nhanh',
-        items: []
-      },
+        createDraft: {
+          invoiceCode: '',
+          invoiceStatus: 'B1',
+          summary: 'Tạo nhanh từ danh sách phiếu đặt hàng nhanh',
+          supplierId: 0,
+          supplierCode: '',
+          supplierName: '',
+          supplierPhone: '',
+          items: []
+        },
       statuses: [
         { key: 'created', title: 'Đã tạo' },
         { key: 'ordered', title: 'Đã đặt NCC' },
@@ -344,6 +355,10 @@
           invoiceCode: '',
           invoiceStatus: 'B1',
           summary: 'Tạo nhanh từ danh sách phiếu đặt hàng nhanh',
+          supplierId: 0,
+          supplierCode: '',
+          supplierName: '',
+          supplierPhone: '',
           items: []
         }
         showModalById('quickPurchaseCreateModal')
@@ -358,6 +373,10 @@
           this.createDraft.invoiceCode = data.invoiceCode || code
           this.createDraft.invoiceStatus = data.invoiceStatus || 'B1'
           this.createDraft.summary = data.summary || this.createDraft.summary
+          this.createDraft.supplierId = data.supplierId || 0
+          this.createDraft.supplierCode = data.supplierCode || ''
+          this.createDraft.supplierName = data.supplierName || ''
+          this.createDraft.supplierPhone = data.supplierPhone || ''
           this.createDraft.items = Array.isArray(data.items) ? data.items : []
         }).fail(xhr => {
           alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không nạp được dữ liệu từ Odoo')

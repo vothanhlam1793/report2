@@ -73,6 +73,9 @@ Dữ liệu status cũ `1..5` vẫn được hỗ trợ bằng normalize mapping
 | `/invoices/package` | Workspace đóng hàng (`B4-B5`) |
 | `/invoices/ship` | Workspace giao chành (`B6-B7`) |
 | `/invoices/detail?code=HD...` | Chi tiết và xử lý 1 hóa đơn |
+| `/finance` | Thu chi phát sinh quy trình |
+| `/customers` | Danh sách khách hàng từ Odoo |
+| `/suppliers` | Danh sách nhà cung cấp từ KiotViet |
 | `/invoices` | Tra cứu hóa đơn cũ |
 
 ## Trọng tâm vận hành hiện tại
@@ -118,12 +121,57 @@ Luồng đang dùng cho `B1 -> B4`:
 - `Thiếu hàng` (Sale decision)
 - `Phiếu đặt hàng nhanh`
 - `Phiếu nhập hàng nhanh`
+- `Finance` cho chi phí phát sinh quy trình
+- `Customers` directory đọc từ Odoo
+- `Suppliers` directory đọc từ KiotViet
 
 ### Chưa hoàn thiện sâu
 
 - Phiếu đóng hàng có log riêng
 - Phiếu giao vận có log riêng
 - Workspace `B8 -> B9`
+- Tool sync `orderTemplate` mới đang ở mode `preview`, chưa bật `write`
+
+## Quick Purchase và NCC
+
+- `Quick Purchase` dùng `supplierCode` KiotViet làm key chính
+- `WHC` có modal tạo nhanh `Quick Purchase` kèm chọn NCC
+- Gợi ý NCC trong `WHC` hiện ưu tiên đọc từ `orderTemplate` của mặt hàng KiotViet
+- Nếu `orderTemplate` có block:
+  - `#NCC-1: CODE | NAME`
+  - `#NCC-2: CODE | NAME`
+  hệ thống sẽ hiển thị trực tiếp cho staff/admin tham khảo
+- Ngoài `orderTemplate`, UI còn hiển thị NCC từ lịch sử `purchaseorders` KiotViet như nguồn tham khảo phụ
+- Hệ thống không auto chọn NCC; nhân viên tự đọc đề xuất rồi tự chọn trong dropdown
+
+## Quick Receipt
+
+- `Quick Receipt` không còn đổi trạng thái tự do bằng dropdown
+- Xác nhận nhận hàng yêu cầu ít nhất `1` ảnh minh chứng
+- Ảnh lưu tại `public/uploads/quick-receipts`
+
+## Finance
+
+- Route: `/finance`
+- Mục tiêu: theo dõi thu/chi phát sinh trong quy trình vận hành
+- Không dùng để theo dõi thu tiền hóa đơn
+- Dữ liệu hiện gắn theo:
+  - `referenceCode`
+  - `invoiceCode`
+  - `customer`
+  - `staff`
+  - `counterparty`
+
+## Sync History Tool
+
+- Thư mục: `sync-history/`
+- Công cụ hiện có: `sync_order_template_suppliers.py`
+- Mục tiêu:
+  - quét `purchaseorders`
+  - gom NCC theo `productCode`
+  - đề xuất block `#NCC-1`, `#NCC-2` cho `orderTemplate`
+- Hiện tại đang dùng tốt cho `preview`
+- Chưa bật `write` cho production trước khi xác minh chắc API update product của KiotViet
 
 ## Logging và audit
 
@@ -139,14 +187,45 @@ Luồng đang dùng cho `B1 -> B4`:
 - `quick_stock_receipt_created`
 - `auto_closed_legacy_invoice`
 
-## Khởi chạy local
+## Runtime hiện tại
+
+Phase dev hiện tại đang chạy trực tiếp trên máy app `10.7.0.2`.
+
+- Workspace active: `/home/black/report2`
+- Process chạy app: `node ./bin/www`
+- Port app: `38655`
+- Domain public: `https://report2.camerangochoang.com`
+- Reverse proxy public: `svr12.creta.vn`
+- Nginx trên `svr12` proxy về: `http://10.7.0.2:38655`
+
+Đây là runtime thật đang dùng để dev và kiểm thử vài ngày tới.
+
+## Khởi chạy app trong phase dev hiện tại
+
+```bash
+node ./bin/www
+```
+
+Kiểm tra local runtime:
+
+```bash
+curl -I http://127.0.0.1:38655/login
+```
+
+Trang public đi qua proxy:
+
+```bash
+https://report2.camerangochoang.com
+```
+
+## Khởi chạy local kiểu mặc định
 
 ```bash
 npm install
 npm start
 ```
 
-App mặc định chạy ở:
+Nếu chạy app theo port mặc định của Express:
 
 ```bash
 http://127.0.0.1:3000
@@ -185,6 +264,15 @@ ODOO_COMPANY_NAME=CRETA
 
 ## Các file nên đọc trước khi phát triển tiếp
 
+Thứ tự nên đọc ở đầu mỗi session:
+
+- `README.md`
+- `docs/dev-runtime.md`
+- `docs/plan.md`
+- `docs/session-notes.md`
+
+Các file code nên đọc tiếp sau khi đã nắm runtime:
+
 - `arch.md` - kiến trúc hệ thống
 - `plan.md` - hướng phát triển tiếp theo
 - `app/lib/invoiceStatus.js` - status B1-B9 phía backend
@@ -201,3 +289,4 @@ ODOO_COMPANY_NAME=CRETA
 - Đã chuẩn hóa một phần dữ liệu cũ: các state mở quá `30 ngày` đã được tự động đưa về `B9`
 - Các workspace `prepare`, `package`, `ship` vẫn còn tồn tại để tái sử dụng, nhưng trọng tâm hiện tại là dashboard + phiếu `B1-B4`
 - Rule chuyển trạng thái cứng chưa được triển khai; hệ thống ưu tiên cảnh báo mềm và ghi log
+- Runtime public hiện tại không đi qua Docker của tài liệu cũ; app đang chạy trực tiếp từ `/home/black/report2` trên port `38655`

@@ -1,66 +1,29 @@
-# Deployment Guide
+# Runtime And Deployment Notes
 
-## Build & Deploy thủ công
+File này thay thế tài liệu Docker deploy cũ.
 
-```bash
-# Build image
-export DOCKER_DEFAULT_PLATFORM=linux/amd64
-docker build -t vothanhlam1793/report:<tag> .
+## Current Runtime
 
-# Push lên Docker Hub
-docker push vothanhlam1793/report:<tag>
+Runtime chính của phase dev hiện tại xem tại:
 
-# SSH vào SVR5 và deploy
-ssh root@160.250.186.124
-docker pull vothanhlam1793/report:<tag>
-docker stop REPORT && docker rm REPORT
-docker run -d \
-  --name REPORT \
-  --restart unless-stopped \
-  -p 30004:3000 \
-  --env-file /root/.env.report \
-  vothanhlam1793/report:<tag>
-```
+- `docs/dev-runtime.md`
 
-## CI/CD tự động (GitHub Actions)
+Tóm tắt:
 
-Push lên branch `master` → tự động:
-1. Build Docker image
-2. Push lên Docker Hub với tag = run number
-3. SSH vào SVR5 → stop/rm container cũ → run container mới
+- App chạy trực tiếp trên `10.7.0.2`
+- Workspace: `/home/black/report2`
+- Process: `node ./bin/www`
+- Port: `38655`
+- Public domain: `report2.camerangochoang.com`
+- Reverse proxy: `svr12.creta.vn`
 
-### Cần setup GitHub Secrets:
+## Important
 
-| Secret | Giá trị |
-|---|---|
-| `DOCKER_USERNAME` | `vothanhlam1793` |
-| `DOCKER_PASSWORD` | Docker Hub password |
-| `SVR5_HOST` | `160.250.186.124` |
-| `SVR5_PASSWORD` | root password SVR5 |
+- Không mặc định giả định Docker là đường chạy chính.
+- Không mặc định giả định CI/CD đang là cách deploy thực tế của môi trường này.
+- Nếu runtime thật và docs cũ mâu thuẫn, tin runtime thật.
 
-## Local Development
+## Legacy Note
 
-```bash
-# Copy env
-cp .env.example .env
-# Điền thông tin vào .env
-
-# Cài dependencies
-npm install
-
-# Chạy dev
-npm run dev
-# hoặc
-node ./bin/www
-```
-
-App chạy tại: http://localhost:3000
-
-## Nginx config trên SVR5
-
-File: `/www/server/panel/vhost/nginx/report.creta.vn.conf`
-Proxy: `localhost:30004` → Docker REPORT container
-
-## Env file trên server
-
-`/root/.env.report` — đọc bởi `docker run --env-file`
+Trước đây repo từng có tài liệu Docker/CI-CD cho môi trường khác.
+Ở phase dev hiện tại, các ghi chú đó không còn là hướng dẫn chính và đã được loại khỏi luồng đọc đầu phiên để tránh gây nhiễu.

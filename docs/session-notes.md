@@ -10,8 +10,17 @@
 - **Repo:** `report2`
 - **Branch làm việc:** `dev`
 - **Runtime local đang dùng:** `http://10.7.0.2:38655`
+- **Workspace runtime thật:** `/home/black/report2`
+- **Process runtime thật:** `node ./bin/www`
 - **Entry point chính:** `/invoices/dashboard`
 - **Auth:** đã có login/session, session lưu Mongo, giữ đăng nhập qua restart app trong `7 ngày`
+
+### Public routing đang dùng thật
+
+- Public domain: `https://report2.camerangochoang.com`
+- Reverse proxy: `svr12.creta.vn`
+- Nginx trên `svr12` proxy về: `http://10.7.0.2:38655`
+- `svr12` không chạy app `report2` trực tiếp, chỉ làm proxy
 
 ---
 
@@ -20,6 +29,7 @@
 ### 1. Môi trường và runtime
 
 - Dự án đã chạy ổn trên `38655`
+- App đang chạy trực tiếp từ chính workspace `/home/black/report2`
 - MongoDB đã cấu hình đúng qua `.env`
 - Odoo credentials đã được nạp vào `.env`
 - Session login đã chuyển sang `connect-mongo`
@@ -76,6 +86,12 @@ Dashboard hiện là entry point trung tâm cho vận hành.
   - danh sách phiếu đặt hàng nhanh, tạo mới trực tiếp, detail độc lập
 - `/invoices/quick-receipt`
   - danh sách phiếu nhập hàng nhanh, tạo mới từ nhiều purchase, detail độc lập
+- `/finance`
+  - workspace riêng cho thu chi phát sinh quy trình
+- `/customers`
+  - directory khách hàng đọc từ Odoo
+- `/suppliers`
+  - directory nhà cung cấp đọc từ KiotViet
 
 Luồng đang dùng:
 
@@ -114,11 +130,45 @@ Luồng đang dùng:
 - `source_invoice_changed`
 - `auto_closed_legacy_invoice`
 
+### 8. Quick Purchase đã có supplier và gợi ý NCC theo mặt hàng
+
+- `Quick Purchase` lưu:
+  - `supplierCode`
+  - `supplierName`
+  - `supplierPhone`
+- `supplierCode` KiotViet là key chính của NCC
+- `WHC` modal tạo nhanh `Quick Purchase` có dropdown NCC
+- `WHC` hiển thị đề xuất NCC theo từng item từ 2 nguồn:
+  - `orderTemplate` của sản phẩm KiotViet
+  - lịch sử `purchaseorders` KiotViet
+- `orderTemplate` được parse theo format:
+  - `#NCC-1: CODE | NAME`
+  - `#NCC-2: CODE | NAME`
+- UI chỉ hiển thị đề xuất để staff/admin tự chọn, không auto-pick NCC
+- Danh sách `Quick Purchase` trong `WHC` hiện đã hiển thị luôn NCC của từng phiếu
+
+### 9. Finance đã có workspace riêng
+
+- route `/finance` đã hoạt động
+- có summary, filter cơ bản và form thêm phát sinh
+- dữ liệu `transactions` đã mở rộng theo hướng chi phí quy trình
+- `/invoices/detail` đã hiển thị card chi phí phát sinh quy trình và link sang `/finance`
+
+### 10. Sync History tool đã có bản preview
+
+- thư mục `sync-history/`
+- script hiện dùng Python CLI:
+  - `python3 sync-history/sync_order_template_suppliers.py`
+- có hỏi option từng bước và xuất report JSON
+- có progress cơ bản cho các bước tải và xử lý
+- hiện xác nhận chạy được ở mode `preview`
+- chưa bật `write` để cập nhật `orderTemplate` hàng loạt lên KiotViet
+
 API đọc log:
 
 - `GET /api/invoice-events`
 
-### 8. Chuẩn hóa dữ liệu cũ
+### 11. Chuẩn hóa dữ liệu cũ
 
 Đã thêm script:
 
@@ -164,6 +214,13 @@ Sau chuẩn hóa:
 - `WHC` và `detail` đã render timeline cơ bản
 - chưa có timeline riêng cho `Quick Purchase` / `Quick Receipt`
 
+### 3.1. Quick Receipt đã đổi workflow xác nhận
+
+- detail `Quick Receipt` không còn cho đổi trạng thái tự do bằng dropdown
+- đã thêm upload hình minh chứng nhận hàng
+- chỉ xác nhận `confirmed` khi đã có ít nhất `1` hình minh chứng
+- ảnh minh chứng hiện lưu ở `public/uploads/quick-receipts`
+
 ### 4. B5 trở đi vẫn chưa chuyển hoàn toàn sang mô hình phiếu/action
 
 - `Đóng hàng`
@@ -171,6 +228,12 @@ Sau chuẩn hóa:
 - `B8 -> B9`
 
 Hiện các page này còn để tái sử dụng tạm, chưa phải workflow cuối cùng.
+
+### 5. Sync `orderTemplate` mới dừng ở preview
+
+- tool `sync-history` mới dùng để build đề xuất NCC theo `purchaseorders`
+- chưa chốt flow `write` để cập nhật ngược KiotViet hàng loạt
+- chưa tích hợp sang dự án sync KiotViet -> Odoo chính
 
 ---
 
@@ -180,6 +243,7 @@ Hiện các page này còn để tái sử dụng tạm, chưa phải workflow c
 2. Làm report/script tiếp cho các đơn cũ đang treo ở `B5`, `B7`, `B8`
 3. Chuẩn hóa sâu hơn logic `B5 -> B9`
 4. Kiểm tra lại nguồn tồn kho Kiot để kết luận đủ/thiếu chính xác hơn
+5. Chốt flow `write` hoặc chuyển tool `sync-history` sang dự án sync riêng nếu cần
 
 ---
 
@@ -188,3 +252,4 @@ Hiện các page này còn để tái sử dụng tạm, chưa phải workflow c
 - Không ưu tiên refactor toàn bộ route cũ trong lúc này
 - Trọng tâm hiện tại là dashboard và luồng `B1 -> B4`
 - Các page cũ khác giữ lại để tái sử dụng tạm hoặc đóng dần sau
+- Tài liệu Docker cũ không còn phản ánh runtime chính của phase dev hiện tại

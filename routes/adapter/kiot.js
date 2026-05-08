@@ -108,6 +108,14 @@ async function getFullProduct() {
   return getFull(url)
 }
 
+async function getFullSupplier() {
+  return getFull('https://public.kiotapi.com/suppliers')
+}
+
+async function getFullPurchaseOrders() {
+  return getFull('https://public.kiotapi.com/purchaseorders')
+}
+
 async function getProductByCodeWithInventory(code) {
   var url = 'https://public.kiotapi.com/products/code/' + code + '?includeInventory=true'
   var branchIds = getConfiguredBranchIds()
@@ -117,10 +125,43 @@ async function getProductByCodeWithInventory(code) {
   return getKiotViet(url)
 }
 
+async function getProductHistory(productId, options) {
+  var query = options || {}
+  var params = []
+  params.push('format=json')
+  params.push('BranchId=' + encodeURIComponent(query.branchId || -1))
+  params.push('$inlinecount=allpages')
+  params.push('$top=' + encodeURIComponent(query.top || 15))
+  if (query.skip) {
+    params.push('$skip=' + encodeURIComponent(query.skip))
+  }
+
+  var token = await getToken()
+  var url = 'https://api-man1.kiotviet.vn/api/products/' + encodeURIComponent(productId) + '/history?' + params.join('&')
+  var res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Retailer: getRetailer(),
+      Authorization: token,
+      Accept: 'application/json'
+    }
+  })
+
+  if (!res.ok) {
+    var bodyText = await res.text()
+    throw new Error('KiotViet product history failed ' + res.status + ': ' + bodyText)
+  }
+
+  return res.json()
+}
+
 module.exports.getKiotViet = getKiotViet
 module.exports.getConfiguredBranchIds = getConfiguredBranchIds
 module.exports.getProductByCodeWithInventory = getProductByCodeWithInventory
+module.exports.getProductHistory = getProductHistory
 module.exports.getFull = getFull
 module.exports.getFullCustomer = getFullCustomer
 module.exports.getFullInvoice = getFullInvoice
 module.exports.getFullProduct = getFullProduct
+module.exports.getFullSupplier = getFullSupplier
+module.exports.getFullPurchaseOrders = getFullPurchaseOrders

@@ -130,6 +130,38 @@ async function mapPartnersById(partnerIds) {
   return result
 }
 
+async function getAllCustomers() {
+  var companyId = await getCompanyId()
+  var allRows = []
+  var offset = 0
+  var limit = 500
+  while (true) {
+    var rows = await executeKw('res.partner', 'search_read', [[['company_id', 'in', [false, companyId]], ['customer_rank', '>', 0]]], {
+      fields: ['id', 'name', 'ref', 'x_kiotviet_1', 'phone', 'mobile', 'street'],
+      limit: limit,
+      offset: offset,
+      order: 'id desc'
+    })
+    if (!rows || !rows.length) {
+      break
+    }
+    rows.forEach(function (row) {
+      allRows.push({
+        id: row.id,
+        code: row.x_kiotviet_1 || row.ref || '',
+        name: row.name || '',
+        phone: row.phone || row.mobile || '',
+        address: row.street || ''
+      })
+    })
+    offset += rows.length
+    if (rows.length < limit) {
+      break
+    }
+  }
+  return allRows
+}
+
 async function getInvoice(code) {
   var companyId = await getCompanyId()
   var orders = await executeKw('sale.order', 'search_read', [[['client_order_ref', '=', code], ['company_id', '=', companyId]]], {
@@ -231,5 +263,6 @@ async function getAllInvoices() {
 
 module.exports = {
   getInvoice: getInvoice,
-  getAllInvoices: getAllInvoices
+  getAllInvoices: getAllInvoices,
+  getAllCustomers: getAllCustomers
 }

@@ -1,4 +1,14 @@
 const db = require('../models')
+const fs = require('fs')
+const path = require('path')
+
+const QUICK_RECEIPT_UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads', 'quick-receipts')
+
+function ensureUploadDir() {
+  if (!fs.existsSync(QUICK_RECEIPT_UPLOAD_DIR)) {
+    fs.mkdirSync(QUICK_RECEIPT_UPLOAD_DIR, { recursive: true })
+  }
+}
 
 function normalizeQuickStockReceipt(item) {
   if (!item) {
@@ -9,6 +19,20 @@ function normalizeQuickStockReceipt(item) {
     normalized.id = String(normalized._id)
   }
   return normalized
+}
+
+function normalizeReceiptImages(images) {
+  return (Array.isArray(images) ? images : []).map(function (image) {
+    return {
+      url: image && image.url ? image.url : '',
+      name: image && image.name ? image.name : '',
+      uploadedAt: image && image.uploadedAt ? image.uploadedAt : null,
+      uploadedByName: image && image.uploadedByName ? image.uploadedByName : '',
+      uploadedByUsername: image && image.uploadedByUsername ? image.uploadedByUsername : ''
+    }
+  }).filter(function (image) {
+    return image.url
+  })
 }
 
 function buildQuery(query) {
@@ -116,6 +140,36 @@ exports.findOne = async (req, res) => {
     res.send(normalizeQuickStockReceipt(data))
   } catch (e) {
     res.status(500).send({ message: e.message || 'Cannot query quick stock receipt' })
+  }
+}
+
+exports.uploadReceiptImage = async (req, res) => {
+  try {
+    const existing = await db.quickStockReceipts.findById(req.params.id)
+    if (!existing) {
+      return res.status(404).send({ message: 'Quick stock receipt not found' })
+    }
+
+    const file = req.file
+    if (!file) {
+      return res.status(400).send({ message: 'Vui lòng chọn hình cần tải lên.' })
+    }
+
+    const user = getCurrentUser(req)
+    const nextImages = normalizeReceiptImages(existing.receiptImages).concat([{ 
+      url: '/uploads/quick-receipts/' + file.filename,
+      name: file.originalname || file.filename,
+      uploadedAt: new Date(),
+      uploadedByName: user.name,
+      uploadedByUsername: user.username
+    }])
+
+    existing.receiptImages = nextImages
+    await existing.save()
+
+    res.send(normalizeQuickStockReceipt(existing.toJSON ? existing.toJSON() : existing))
+  } catch (e) {
+    res.status(500).send({ message: e.message || 'Cannot upload quick stock receipt image' })
   }
 }
 
@@ -239,9 +293,9 @@ exports.update = async (req, res) => {
       existing.summary = req.body.summary
     }
 
-    if (typeof req.body.status === 'string' && req.body.status) {
-      existing.status = req.body.status
-    }
+    existing.receiptImages = normalizeReceiptImages(
+      Array.isArray(req.body.receiptImages) ? req.body.receiptImages : existing.receiptImages
+    )
 
     if (Array.isArray(req.body.linkedQuickPurchaseRequestIds)) {
       existing.linkedQuickPurchaseRequestIds = req.body.linkedQuickPurchaseRequestIds
@@ -271,6 +325,22 @@ exports.update = async (req, res) => {
       existing.items = items
     }
 
+    if (typeof req.body.status === 'string' && req.body.status) {
+      const nextStatus = req.body.status
+      if (nextStatus === 'cancelled') {
+        existing.status = 'cancelled'
+      } else if (nextStatus === 'confirmed') {
+        if (!existing.receiptImages || !existing.receiptImages.length) {
+          return res.status(400).send({ message: 'Cần tải ít nhất 1 hình minh chứng trước khi xác nhận đã nhận hàng.' })
+        }
+        const user = getCurrentUser(req)
+        existing.status = 'confirmed'
+        existing.confirmedAt = new Date()
+        existing.confirmedByName = user.name
+        existing.confirmedByUsername = user.username
+      }
+    }
+
     await existing.save()
     if (existing.status === 'confirmed') {
       await syncLinkedPurchases(existing)
@@ -280,3 +350,6 @@ exports.update = async (req, res) => {
     res.status(500).send({ message: e.message || 'Cannot update quick stock receipt' })
   }
 }
+
+exports.QUICK_RECEIPT_UPLOAD_DIR = QUICK_RECEIPT_UPLOAD_DIR
+exports.ensureUploadDir = ensureUploadDir

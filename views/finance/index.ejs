@@ -1,0 +1,269 @@
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Finance',
+  pageTitle: 'Finance',
+  pageSubtitle: 'Theo dõi thu chi phát sinh trong quy trình vận hành, không bao gồm thu tiền hóa đơn.',
+  currentPath: '/finance',
+  currentUser: currentUser
+}) %>
+<div id="finance-page">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải dữ liệu finance...</div>
+  </div>
+
+  <template v-if="!isLoading">
+    <div class="row mb-3">
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100"><div class="card-body"><div class="small text-muted">Số khoản phát sinh</div><div class="display-4">{{ filteredItems.length }}</div></div></div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100"><div class="card-body"><div class="small text-muted">Tổng chi</div><div class="h3 mb-0 text-danger">{{ formatMoney(totalExpense) }}</div></div></div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100"><div class="card-body"><div class="small text-muted">Tổng thu</div><div class="h3 mb-0 text-success">{{ formatMoney(totalIncome) }}</div></div></div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100"><div class="card-body"><div class="small text-muted">Chênh lệch</div><div class="h3 mb-0">{{ formatMoney(totalIncome - totalExpense) }}</div></div></div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="form-row align-items-end">
+          <div class="col-md-2">
+            <label>Từ ngày</label>
+            <input type="date" class="form-control" v-model="filters.startDate">
+          </div>
+          <div class="col-md-2">
+            <label>Đến ngày</label>
+            <input type="date" class="form-control" v-model="filters.endDate">
+          </div>
+          <div class="col-md-2">
+            <label>Loại</label>
+            <select class="form-control" v-model="filters.category">
+              <option value="">Tất cả</option>
+              <option v-for="item in categories" :value="item.key">{{ item.title }}</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label>Chiều</label>
+            <select class="form-control" v-model="filters.direction">
+              <option value="">Tất cả</option>
+              <option value="expense">Chi</option>
+              <option value="income">Thu</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label>Staff</label>
+            <select class="form-control" v-model="filters.staffUsername">
+              <option value="">Tất cả</option>
+              <% users.forEach(function(user) { %>
+                <option value="<%= user.username %>"><%= user.name %> (<%= user.username %>)</option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-outline-secondary btn-block" @click="loadTransactions()">Làm mới</button>
+          </div>
+        </div>
+        <div class="form-row align-items-end mt-3">
+          <div class="col-md-8">
+            <label>Tìm theo reference / invoice / customer / đối tượng / mô tả</label>
+            <input class="form-control" v-model="filters.search" placeholder="VD: HD020879, Anh Duy, phí trả hàng">
+          </div>
+          <div class="col-md-4 text-right">
+            <button class="btn btn-outline-primary" data-toggle="collapse" data-target="#financeCreatePanel">Thêm phát sinh mới</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3 collapse show" id="financeCreatePanel">
+      <div class="card-body">
+        <h5 class="mb-3">Thêm phát sinh quy trình</h5>
+        <div class="form-row">
+          <div class="col-md-2 mb-3"><label>Reference</label><input class="form-control" v-model="draft.referenceCode"></div>
+          <div class="col-md-2 mb-3"><label>Invoice</label><input class="form-control" v-model="draft.invoiceCode"></div>
+          <div class="col-md-2 mb-3"><label>Customer code</label><input class="form-control" v-model="draft.customerCode"></div>
+          <div class="col-md-3 mb-3"><label>Customer name</label><input class="form-control" v-model="draft.customerName"></div>
+          <div class="col-md-3 mb-3"><label>Ngày phát sinh</label><input type="date" class="form-control" v-model="draft.transactionDate"></div>
+        </div>
+        <div class="form-row">
+          <div class="col-md-2 mb-3"><label>Chiều</label><select class="form-control" v-model="draft.direction"><option value="expense">Chi</option><option value="income">Thu</option></select></div>
+          <div class="col-md-3 mb-3"><label>Loại phí</label><select class="form-control" v-model="draft.category"><option v-for="item in categories" :value="item.key">{{ item.title }}</option></select></div>
+          <div class="col-md-2 mb-3"><label>Số tiền</label><input type="number" min="0" class="form-control" v-model.number="draft.amount"></div>
+          <div class="col-md-2 mb-3"><label>Đối tượng</label><select class="form-control" v-model="draft.counterpartyType"><option value="carrier">Carrier</option><option value="staff">Staff</option><option value="customer">Customer</option><option value="other">Other</option></select></div>
+          <div class="col-md-3 mb-3"><label>Tên đối tượng</label><input class="form-control" v-model="draft.counterpartyName"></div>
+        </div>
+        <div class="form-row align-items-end">
+          <div class="col-md-4 mb-3"><label>Staff phụ trách</label><select class="form-control" v-model="draft.staffUsername" @change="syncStaffName"><option value="">Chọn staff</option><% users.forEach(function(user) { %><option value="<%= user.username %>"><%= user.name %> (<%= user.username %>)</option><% }) %></select></div>
+          <div class="col-md-6 mb-3"><label>Mô tả</label><input class="form-control" v-model="draft.description"></div>
+          <div class="col-md-2 mb-3"><button class="btn btn-primary btn-block" @click="createTransaction()">Lưu phát sinh</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <table class="table table-bordered table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Ngày</th>
+              <th>Reference</th>
+              <th>Invoice</th>
+              <th>Khách hàng</th>
+              <th>Loại</th>
+              <th>Đối tượng</th>
+              <th>Staff</th>
+              <th>Mô tả</th>
+              <th>Số tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in filteredItems" :key="item.id">
+              <td>{{ formatDate(item.transactionDate || item.date) }}</td>
+              <td><a v-if="item.referenceCode" :href="'/invoices/detail?code=' + item.referenceCode">{{ item.referenceCode }}</a><span v-else>-</span></td>
+              <td>{{ item.invoiceCode || '-' }}</td>
+              <td>{{ item.customerName || item.customerCode || '-' }}</td>
+              <td><span class="badge" :class="directionBadgeClass(item.direction)">{{ categoryTitle(item.category) }}</span></td>
+              <td>{{ counterpartyLabel(item) }}</td>
+              <td>{{ item.staffName || item.staffUsername || '-' }}</td>
+              <td>{{ item.description || item.content || '-' }}</td>
+              <td :class="item.direction === 'income' ? 'text-success' : 'text-danger'">{{ formatMoney(item.amount) }}</td>
+            </tr>
+            <tr v-if="!filteredItems.length"><td colspan="9" class="text-center text-muted">Chưa có phát sinh quy trình nào.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script>
+  new Vue({
+    el: '#finance-page',
+    data: {
+      items: [],
+      isLoading: false,
+      filters: {
+        startDate: '',
+        endDate: '',
+        category: '',
+        direction: '',
+        staffUsername: '',
+        search: ''
+      },
+      draft: {
+        referenceCode: '',
+        invoiceCode: '',
+        customerCode: '',
+        customerName: '',
+        transactionDate: new Date().toISOString().slice(0, 10),
+        direction: 'expense',
+        category: 'inbound_shipping_fee',
+        amount: 0,
+        counterpartyType: 'carrier',
+        counterpartyName: '',
+        staffUsername: '',
+        staffName: '',
+        description: ''
+      },
+      categories: [
+        { key: 'inbound_shipping_fee', title: 'Phí chuyển hàng về' },
+        { key: 'return_shipping_fee', title: 'Phí trả hàng' },
+        { key: 'packing_cost', title: 'Phí đóng gói' },
+        { key: 'loading_cost', title: 'Phí bốc xếp' },
+        { key: 'other_operational', title: 'Chi phí khác' }
+      ]
+    },
+    computed: {
+      filteredItems() {
+        var search = (this.filters.search || '').trim().toLowerCase()
+        return this.items.filter(item => {
+          if (this.filters.category && item.category !== this.filters.category) return false
+          if (this.filters.direction && item.direction !== this.filters.direction) return false
+          if (this.filters.staffUsername && item.staffUsername !== this.filters.staffUsername) return false
+          var haystack = [item.referenceCode, item.invoiceCode, item.customerCode, item.customerName, item.counterpartyName, item.description, item.content].join(' ').toLowerCase()
+          return !search || haystack.includes(search)
+        })
+      },
+      totalExpense() {
+        return this.filteredItems.filter(item => item.direction !== 'income').reduce((sum, item) => sum + Number(item.amount || 0), 0)
+      },
+      totalIncome() {
+        return this.filteredItems.filter(item => item.direction === 'income').reduce((sum, item) => sum + Number(item.amount || 0), 0)
+      }
+    },
+    methods: {
+      buildQuery() {
+        var params = new URLSearchParams()
+        Object.keys(this.filters).forEach(key => {
+          if (this.filters[key]) params.set(key, this.filters[key])
+        })
+        return params.toString()
+      },
+      loadTransactions() {
+        this.isLoading = true
+        $.get('/api/transactions' + (this.buildQuery() ? '?' + this.buildQuery() : ''), data => {
+          this.items = data || []
+        }).always(() => {
+          this.isLoading = false
+        })
+      },
+      syncStaffName() {
+        var options = document.querySelectorAll('select[v-model="draft.staffUsername"] option')
+        var matched = Array.from(options).find(option => option.value === this.draft.staffUsername)
+        if (matched && matched.textContent) {
+          this.draft.staffName = matched.textContent.split(' (')[0]
+        }
+      },
+      createTransaction() {
+        if (!this.draft.referenceCode && !this.draft.invoiceCode) {
+          alert('Cần nhập reference hoặc invoice code.')
+          return
+        }
+        if (!this.draft.amount || this.draft.amount <= 0) {
+          alert('Số tiền phải lớn hơn 0.')
+          return
+        }
+        $.ajax({
+          url: '/api/transactions',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(this.draft)
+        }).done(() => {
+          this.loadTransactions()
+          this.draft.amount = 0
+          this.draft.counterpartyName = ''
+          this.draft.description = ''
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không thể tạo phát sinh quy trình')
+        })
+      },
+      formatMoney(value) {
+        return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+      },
+      formatDate(value) {
+        return value ? moment(value).format('DD/MM/YYYY') : '-'
+      },
+      categoryTitle(category) {
+        var matched = this.categories.find(item => item.key === category)
+        return matched ? matched.title : (category || '-')
+      },
+      directionBadgeClass(direction) {
+        return direction === 'income' ? 'badge-success' : 'badge-danger'
+      },
+      counterpartyLabel(item) {
+        return [item.counterpartyType || '-', item.counterpartyName || ''].join(' | ')
+      }
+    },
+    created() {
+      var params = new URLSearchParams(window.location.search)
+      this.filters.search = params.get('search') || ''
+      this.filters.startDate = params.get('startDate') || ''
+      this.filters.endDate = params.get('endDate') || ''
+      this.loadTransactions()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>

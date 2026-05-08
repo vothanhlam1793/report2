@@ -1,4 +1,7 @@
-# Development Plan — report.creta.vn
+# Development Plan — report2
+
+> Lưu ý: file này tập trung vào roadmap sản phẩm và code.
+> Runtime/dev server hiện tại xem ở `docs/dev-runtime.md`.
 
 ## Phase 1 — Sync & Merge (Ưu tiên cao) ← ĐANG LÀM
 
@@ -30,14 +33,29 @@
 
 | # | Task | Status |
 |---|---|---|
-| 3.1 | Setup GitHub Secrets cho CI/CD pipeline | ⬜ |
-| 3.2 | Test CI/CD: push → auto build → auto deploy SVR5 | ⬜ |
+| 3.1 | Làm rõ và chuẩn hóa quy trình restart/runtime trên `10.7.0.2` | ✅ |
+| 3.2 | Chỉ giữ CI/CD hoặc Docker nếu còn dùng thật sau phase dev | ⬜ |
 | 3.3 | Kiểm tra WebSocket barcode end-to-end trên production | ⬜ |
 | 3.4 | Kiểm tra camera phone barcode trên production | ⬜ |
 
 ---
 
-## Phase 4 — Authentication (Ưu tiên trung bình)
+## Phase 4 — Vận hành mới (Đang active)
+
+| # | Task | Status |
+|---|---|---|
+| 4.1 | Dựng `/finance` cho chi phí phát sinh quy trình | ✅ |
+| 4.2 | Thêm directory `/customers` đọc từ Odoo | ✅ |
+| 4.3 | Thêm directory `/suppliers` đọc từ KiotViet | ✅ |
+| 4.4 | Chuẩn hóa `Quick Receipt` xác nhận bằng ảnh | ✅ |
+| 4.5 | Thêm supplier vào `Quick Purchase` | ✅ |
+| 4.6 | Hiển thị đề xuất NCC trong `WHC` từ `orderTemplate` và `purchaseorders` | ✅ |
+| 4.7 | Tool `sync-history` để build `#NCC-1/#NCC-2` ở mode preview | ✅ |
+| 4.8 | Bật mode `write` an toàn cho tool sync `orderTemplate` | ⬜ |
+
+---
+
+## Phase 5 — Authentication (Ưu tiên trung bình)
 
 App hiện tại **public hoàn toàn** — ai có URL đều vào được.
 
@@ -49,7 +67,7 @@ App hiện tại **public hoàn toàn** — ai có URL đều vào được.
 
 ---
 
-## Phase 5 — Nâng cấp dài hạn (Ưu tiên thấp)
+## Phase 6 — Nâng cấp dài hạn (Ưu tiên thấp)
 
 | # | Task | Status |
 |---|---|---|
@@ -75,3 +93,13 @@ KHÔNG có route /barcode/...          CÓ route /barcode/:inv/:prod
 
 ### WebSocket barcode flow
 Xem chi tiết: `docs/architecture.md`
+
+## Ghi chú phase dev hiện tại
+
+- App đang được dev trực tiếp trên máy `10.7.0.2`
+- Runtime active: `/home/black/report2` + `node ./bin/www` + port `38655`
+- Public domain đi qua proxy `svr12.creta.vn`
+- Không nên lấy tài liệu Docker cũ làm giả định mặc định khi tiếp tục phát triển
+- Gợi ý NCC trong `WHC` hiện ưu tiên đọc `orderTemplate` từ KiotViet
+- `purchaseorders` là nguồn lịch sử nhập dùng để đề xuất phụ và để sync block `#NCC-1/#NCC-2`
+- Tool `sync-history` đang ở `preview` mode, chờ chốt flow `write`

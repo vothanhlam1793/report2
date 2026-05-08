@@ -1,0 +1,95 @@
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Suppliers',
+  pageTitle: 'Suppliers',
+  pageSubtitle: 'Danh sách nhà cung cấp lấy từ KiotViet Public API 2.26.',
+  currentPath: '/suppliers',
+  currentUser: currentUser
+}) %>
+<div id="supplier-directory-page">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải danh sách nhà cung cấp...</div>
+  </div>
+
+  <template v-if="!isLoading">
+    <div class="alert alert-warning" v-if="errorMessage">{{ errorMessage }}</div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="form-row align-items-end">
+          <div class="col-md-10">
+            <label>Tìm theo mã / tên / số điện thoại</label>
+            <input class="form-control" v-model="searchText" placeholder="VD: NCC001 hoặc HIKVISION">
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-outline-secondary btn-block" @click="loadData()">Làm mới</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <table class="table table-bordered table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Mã NCC</th>
+              <th>Tên</th>
+              <th>Số điện thoại</th>
+              <th>Địa chỉ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in filteredItems" :key="item.id || item.code || item.name">
+              <td>{{ item.code || '-' }}</td>
+              <td>{{ item.name || '-' }}</td>
+              <td>{{ item.contactNumber || '-' }}</td>
+              <td>{{ item.address || '-' }}</td>
+            </tr>
+            <tr v-if="!filteredItems.length">
+              <td colspan="4" class="text-center text-muted">Không có nhà cung cấp phù hợp.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script>
+  new Vue({
+    el: '#supplier-directory-page',
+    data: {
+      items: [],
+      isLoading: false,
+      searchText: '',
+      errorMessage: ''
+    },
+    computed: {
+      filteredItems() {
+        var search = (this.searchText || '').trim().toLowerCase()
+        return (this.items || []).filter(function (item) {
+          var haystack = [item.code, item.name, item.contactNumber, item.address].join(' ').toLowerCase()
+          return !search || haystack.includes(search)
+        })
+      }
+    },
+    methods: {
+      loadData() {
+        this.isLoading = true
+        this.errorMessage = ''
+        $.get('/api/suppliers', data => {
+          this.items = Array.isArray(data) ? data : []
+        }).fail(xhr => {
+          this.errorMessage = (xhr.responseJSON && xhr.responseJSON.message) || 'Không tải được danh sách nhà cung cấp từ KiotViet.'
+        }).always(() => {
+          this.isLoading = false
+        })
+      }
+    },
+    created() {
+      this.loadData()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>

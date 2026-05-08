@@ -14,6 +14,9 @@
     <a class="app-sidebar-link <%= isActive('/invoices/prepare') ? 'active' : '' %>" href="/invoices/prepare">Cần duyệt kho</a>
     <a class="app-sidebar-link <%= isActive('/invoices/package') ? 'active' : '' %>" href="/invoices/package">Đóng hàng</a>
     <a class="app-sidebar-link <%= isActive('/invoices/ship') ? 'active' : '' %>" href="/invoices/ship">Giao chành</a>
+    <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+      <a class="app-sidebar-link <%= isActive('/finance') ? 'active' : '' %>" href="/finance">Finance</a>
+    <% } %>
   </div>
 
   <% if (currentUser && currentUser.role === 'admin') { %>
@@ -29,6 +32,10 @@
     <div class="app-sidebar-label">TRA CỨU</div>
     <a class="app-sidebar-link <%= currentPath === '/invoices' ? 'active' : '' %>" href="/invoices">Danh sách hóa đơn</a>
     <a class="app-sidebar-link <%= isActive('/invoices/summary') ? 'active' : '' %>" href="/invoices/summary">Báo cáo tổng hợp</a>
+    <% if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) { %>
+      <a class="app-sidebar-link <%= isActive('/customers') ? 'active' : '' %>" href="/customers">Customers</a>
+      <a class="app-sidebar-link <%= isActive('/suppliers') ? 'active' : '' %>" href="/suppliers">Suppliers</a>
+    <% } %>
   </div>
 
   <% if (currentUser && currentUser.role === 'admin') { %>

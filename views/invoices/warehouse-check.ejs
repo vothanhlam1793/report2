@@ -157,6 +157,7 @@
               <div class="d-flex justify-content-between align-items-center">
                 <div>
                   {{ item.createdAt ? moment(item.createdAt).format('DD/MM HH:mm') : '-' }} - {{ item.summary || 'Phiếu đặt hàng nhanh' }}
+                  <div class="small text-muted mt-1">NCC: {{ item.supplierCode || '-' }}<span v-if="item.supplierName"> | {{ item.supplierName }}</span></div>
                 </div>
                 <a class="btn btn-sm btn-outline-primary" :href="'/invoices/quick-purchase/' + item.id">Mở phiếu</a>
               </div>
@@ -199,6 +200,15 @@
             <input class="form-control" v-model="quickPurchaseDraft.summary">
           </div>
 
+          <div class="form-group">
+            <label>Nhà cung cấp nhập hàng</label>
+            <select class="form-control" v-model="quickPurchaseDraft.supplierCode" @change="selectQuickPurchaseSupplierByCode" :disabled="isLoadingSuppliers">
+              <option value="">Chọn nhà cung cấp</option>
+              <option v-for="supplier in suppliers" :value="supplier.code">{{ supplier.name }}{{ supplier.code ? ' (' + supplier.code + ')' : '' }}</option>
+            </select>
+            <div class="small text-muted mt-1" v-if="quickPurchaseDraft.supplierPhone">SĐT: {{ quickPurchaseDraft.supplierPhone }}</div>
+          </div>
+
           <table class="table table-bordered table-hover mb-0">
             <thead>
               <tr>
@@ -207,6 +217,7 @@
                 <th>SL cần</th>
                 <th>Tổng khả dụng</th>
                 <th>Đề xuất đặt</th>
+                <th>Gợi ý NCC</th>
               </tr>
             </thead>
             <tbody>
@@ -222,6 +233,26 @@
                     class="form-control"
                     v-model.number="line.requestedQty"
                   >
+                </td>
+                <td>
+                  <div class="small text-muted" v-if="structuredSuppliers(line.productCode).length">
+                    <div class="font-weight-bold">NCC theo orderTemplate</div>
+                    <div v-for="item in structuredSuppliers(line.productCode)" :key="line.productCode + '-ncc-' + item.rank">
+                      #NCC-{{ item.rank }}: {{ item.supplierCode || '-' }}<span v-if="item.supplierName"> | {{ item.supplierName }}</span>
+                    </div>
+                  </div>
+                  <div class="small text-muted mt-1" v-if="productSuggestion(line.productCode) && productSuggestion(line.productCode).orderTemplateNote">
+                    <div class="font-weight-bold">Ghi chú đặt hàng</div>
+                    <div style="white-space: pre-line;">{{ productSuggestion(line.productCode).orderTemplateNote }}</div>
+                  </div>
+                  <div class="small text-muted mt-1" v-if="recentSuppliers(line.productCode).length">
+                    <div class="font-weight-bold">NCC từ lịch sử nhập</div>
+                    <div v-for="(item, index) in recentSuppliers(line.productCode).slice(0, 2)" :key="line.productCode + '-recent-' + index">
+                      {{ index + 1 }}. {{ item.supplierCode || '-' }}<span v-if="item.supplierName"> | {{ item.supplierName }}</span>
+                      <span v-if="item.count"> ({{ item.count }} lần)</span>
+                    </div>
+                  </div>
+                  <div class="small text-muted mt-1" v-if="!structuredSuppliers(line.productCode).length && !recentSuppliers(line.productCode).length && !(productSuggestion(line.productCode) && productSuggestion(line.productCode).orderTemplateNote)">Chưa có gợi ý</div>
                 </td>
               </tr>
             </tbody>
@@ -294,13 +325,45 @@
       invoiceEvents: [],
       isLoading: false,
       isLoadingEvents: false,
+      isLoadingSuppliers: false,
+      suppliers: [],
+      supplierSuggestions: {},
       changeOrderReason: '',
       quickPurchaseDraft: {
         summary: 'Tạo nhanh từ phiếu kiểm tra kho',
+        supplierId: 0,
+        supplierCode: '',
+        supplierName: '',
+        supplierPhone: '',
         items: []
       }
     },
     methods: {
+      loadSuppliers() {
+        this.isLoadingSuppliers = true
+        $.get('/api/suppliers', data => {
+          this.suppliers = Array.isArray(data) ? data : []
+        }).always(() => {
+          this.isLoadingSuppliers = false
+        })
+      },
+      loadSupplierSuggestions(productCodes) {
+        var codes = Array.isArray(productCodes) ? productCodes.filter(Boolean) : []
+        if (!codes.length) {
+          this.supplierSuggestions = {}
+          return
+        }
+        $.ajax({
+          url: '/api/supplier-suggestions/by-products',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ productCodes: codes })
+        }).done(data => {
+          this.supplierSuggestions = data || {}
+        }).fail(() => {
+          this.supplierSuggestions = {}
+        })
+      },
       loadData() {
         var params = new URLSearchParams(window.location.search)
         var code = params.get('code') || ''
@@ -345,6 +408,10 @@
       openQuickPurchaseModal() {
         this.quickPurchaseDraft = {
           summary: 'Tạo nhanh từ phiếu kiểm tra kho',
+          supplierId: 0,
+          supplierCode: '',
+          supplierName: '',
+          supplierPhone: '',
           items: (this.warehouseCheck.lines || []).map(function (line) {
             return {
               productCode: line.productCode,
@@ -355,9 +422,26 @@
             }
           })
         }
+        this.loadSupplierSuggestions(this.quickPurchaseDraft.items.map(function (line) {
+          return line.productCode
+        }))
         showModalById('quickPurchaseModal')
       },
+      selectQuickPurchaseSupplierByCode() {
+        var supplierCode = String(this.quickPurchaseDraft.supplierCode || '').trim()
+        var matched = this.suppliers.find(function (item) {
+          return String(item.code || '').trim() === supplierCode
+        })
+        this.quickPurchaseDraft.supplierId = matched ? Number(matched.id || 0) : 0
+        this.quickPurchaseDraft.supplierCode = matched ? (matched.code || '') : ''
+        this.quickPurchaseDraft.supplierName = matched ? (matched.name || '') : ''
+        this.quickPurchaseDraft.supplierPhone = matched ? (matched.contactNumber || '') : ''
+      },
       submitQuickPurchase() {
+        if (!this.quickPurchaseDraft.supplierCode || !this.quickPurchaseDraft.supplierName) {
+          alert('Vui lòng chọn nhà cung cấp trước khi tạo phiếu đặt hàng nhanh.')
+          return
+        }
         var params = new URLSearchParams(window.location.search)
         var code = params.get('code') || ''
         $.ajax({
@@ -366,6 +450,10 @@
           contentType: 'application/json',
           data: JSON.stringify({
             summary: this.quickPurchaseDraft.summary,
+            supplierId: this.quickPurchaseDraft.supplierId,
+            supplierCode: this.quickPurchaseDraft.supplierCode,
+            supplierName: this.quickPurchaseDraft.supplierName,
+            supplierPhone: this.quickPurchaseDraft.supplierPhone,
             items: this.quickPurchaseDraft.items
           })
         }).done(data => {
@@ -406,6 +494,37 @@
         return (this.warehouseCheck.lines || []).some(function (line) {
           return !line.isEnough
         })
+      },
+      productSuggestion(productCode) {
+        return this.supplierSuggestions[String(productCode || '').trim()] || null
+      },
+      structuredSuppliers(productCode) {
+        var suggestion = this.productSuggestion(productCode)
+        return suggestion && Array.isArray(suggestion.structuredSuppliers) ? suggestion.structuredSuppliers : []
+      },
+      recentSuppliers(productCode) {
+        var suggestion = this.productSuggestion(productCode)
+        return suggestion && Array.isArray(suggestion.recentSuppliers) ? suggestion.recentSuppliers : []
+      },
+      topSuggestedSupplier(productCode) {
+        var suggestion = this.productSuggestion(productCode)
+        if (!suggestion || !Array.isArray(suggestion.recommendedSuppliers) || !suggestion.recommendedSuppliers.length) {
+          return null
+        }
+        return suggestion.recommendedSuppliers[0]
+      },
+      suggestedSupplierMeta(productCode) {
+        var supplier = this.topSuggestedSupplier(productCode)
+        if (!supplier) {
+          return ''
+        }
+        if (supplier.source === 'product_note') {
+          return 'Nguon: ghi chu dat hang'
+        }
+        if (supplier.source === 'purchase_history') {
+          return 'Nguon: phieu nhap Kiot | ' + Number(supplier.count || 0) + ' lan'
+        }
+        return ''
       },
       stockSummary() {
         if (this.hasShortage()) {
@@ -520,6 +639,7 @@
       }
     },
     created() {
+      this.loadSuppliers()
       this.loadData()
     }
   })

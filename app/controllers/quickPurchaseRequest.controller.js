@@ -42,6 +42,15 @@ function normalizeItems(items) {
     })
 }
 
+function normalizeSupplier(data) {
+  return {
+    supplierId: Number(data.supplierId || 0),
+    supplierCode: String(data.supplierCode || '').trim(),
+    supplierName: data.supplierName || '',
+    supplierPhone: data.supplierPhone || ''
+  }
+}
+
 function buildSupplierMessage(items) {
   return normalizeItems(items)
     .filter(function (item) {
@@ -99,6 +108,10 @@ exports.getPrefill = async (req, res) => {
       customerName: invoice.customerName || invoice.customerCode || '',
       invoiceStatus: normalizedStatus,
       summary: 'Tạo nhanh từ danh sách phiếu đặt hàng nhanh',
+      supplierId: 0,
+      supplierCode: '',
+      supplierName: '',
+      supplierPhone: '',
       items: (invoice.invoiceDetails || []).map(function (line) {
         return {
           productCode: line.productCode || '',
@@ -137,6 +150,7 @@ exports.create = async (req, res) => {
       status: 'created',
       summary: req.body.summary || 'Tạo nhanh từ danh sách phiếu đặt hàng nhanh',
       supplierMessage: req.body.supplierMessage || buildSupplierMessage(items),
+      ...normalizeSupplier(req.body || {}),
       createdByName: user.name,
       createdByUsername: user.username,
       items: items
@@ -161,6 +175,14 @@ exports.update = async (req, res) => {
 
     if (typeof req.body.supplierMessage === 'string') {
       existing.supplierMessage = req.body.supplierMessage
+    }
+
+    if (req.body && (req.body.supplierId || req.body.supplierCode || req.body.supplierName || req.body.supplierPhone)) {
+      const supplier = normalizeSupplier(req.body)
+      existing.supplierId = supplier.supplierId
+      existing.supplierCode = supplier.supplierCode
+      existing.supplierName = supplier.supplierName
+      existing.supplierPhone = supplier.supplierPhone
     }
 
     if (typeof req.body.status === 'string' && req.body.status) {

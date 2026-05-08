@@ -235,6 +235,42 @@
 
     <div class="card shadow-sm mb-3">
       <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">Chi phí phát sinh quy trình</h5>
+          <a class="btn btn-sm btn-outline-secondary" :href="'/finance?search=' + encodeURIComponent(detail.referenceCode || currentInvoice.code || '')">Mở Finance</a>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <div class="small text-muted">Tổng chi</div>
+            <div class="h5 text-danger">{{ formatMoney(totalOperationalExpense()) }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted">Tổng thu</div>
+            <div class="h5 text-success">{{ formatMoney(totalOperationalIncome()) }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="small text-muted">Số khoản</div>
+            <div class="h5">{{ detail.transactions.length }}</div>
+          </div>
+        </div>
+        <div v-if="detail.transactions.length">
+          <div class="border rounded p-3 mb-2" v-for="item in detail.transactions" :key="item.id">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="font-weight-bold">{{ transactionCategoryTitle(item.category) }}</div>
+                <div class="text-muted">{{ item.description || item.content || '-' }}</div>
+              </div>
+              <div :class="item.direction === 'income' ? 'text-success font-weight-bold' : 'text-danger font-weight-bold'">{{ formatMoney(item.amount) }}</div>
+            </div>
+            <div class="small text-muted mt-2">{{ formatDate(item.transactionDate || item.date) }} | {{ transactionCounterpartyLabel(item) }} | {{ item.staffName || item.staffUsername || '-' }}</div>
+          </div>
+        </div>
+        <div class="text-muted" v-else>Chưa có chi phí phát sinh quy trình cho reference này.</div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
         <h5 class="mb-3">Sản phẩm của đơn hiện tại</h5>
         <table class="table table-bordered table-hover mb-0">
           <thead>
@@ -282,6 +318,7 @@
         invoiceEvents: [],
         quickPurchaseRequests: [],
         quickStockReceipts: [],
+        transactions: [],
         phieus: [],
         packageCount: 0
       },
@@ -438,6 +475,33 @@
       },
       formatMoney(value) {
         return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+      },
+      totalOperationalExpense() {
+        return (this.detail.transactions || []).filter(function (item) {
+          return item.direction !== 'income'
+        }).reduce(function (sum, item) {
+          return sum + Number(item.amount || 0)
+        }, 0)
+      },
+      totalOperationalIncome() {
+        return (this.detail.transactions || []).filter(function (item) {
+          return item.direction === 'income'
+        }).reduce(function (sum, item) {
+          return sum + Number(item.amount || 0)
+        }, 0)
+      },
+      transactionCategoryTitle(category) {
+        var map = {
+          inbound_shipping_fee: 'Phí chuyển hàng về',
+          return_shipping_fee: 'Phí trả hàng',
+          packing_cost: 'Phí đóng gói',
+          loading_cost: 'Phí bốc xếp',
+          other_operational: 'Chi phí khác'
+        }
+        return map[category] || (category || '-')
+      },
+      transactionCounterpartyLabel(item) {
+        return [item.counterpartyType || '-', item.counterpartyName || '-'].join(' | ')
       },
       packageCountLabel() {
         return this.detail.packageCount || 0

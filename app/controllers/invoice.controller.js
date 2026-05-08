@@ -146,7 +146,7 @@ exports.getDetailByCode = async (req, res) => {
         const code = req.params.code
         const referenceCode = getReferenceCode(code)
 
-        const [invoiceState, currentInvoice, allInvoices, allInvoiceStates, allWarehouseChecks, allEvents, allQuickPurchases, allQuickReceipts] = await Promise.all([
+        const [invoiceState, currentInvoice, allInvoices, allInvoiceStates, allWarehouseChecks, allEvents, allQuickPurchases, allQuickReceipts, allTransactions] = await Promise.all([
             Model.findOne({ code: code }).lean(),
             odoo.getInvoice(code),
             odoo.getAllInvoices(),
@@ -154,7 +154,8 @@ exports.getDetailByCode = async (req, res) => {
             db.warehouseChecks.find({ referenceCode: referenceCode }).sort({ updatedAt: -1 }).lean(),
             db.invoiceEvents.find({ referenceCode: referenceCode }).sort({ createdAt: -1 }).lean(),
             db.quickPurchaseRequests.find({ referenceCode: referenceCode }).sort({ createdAt: -1 }).lean(),
-            db.quickStockReceipts.find({ referenceCode: referenceCode }).sort({ createdAt: -1 }).lean()
+            db.quickStockReceipts.find({ referenceCode: referenceCode }).sort({ createdAt: -1 }).lean(),
+            db.transactions.find({ referenceCode: referenceCode }).sort({ transactionDate: -1, createdAt: -1 }).lean()
         ])
 
         const invoiceStateMap = new Map((allInvoiceStates || []).map(function (item) {
@@ -182,7 +183,11 @@ exports.getDetailByCode = async (req, res) => {
         })
 
         const allPhieus = await db.phieus.find({ code: { $in: relatedCodes } }).sort({ createdAt: -1 }).lean()
-        const activeInvoice = getLatestInvoice(relatedInvoiceRows) || currentInvoice || {}
+        const activeInvoiceSummary = getLatestInvoice(relatedInvoiceRows) || currentInvoice || {}
+        const activeInvoiceCode = activeInvoiceSummary.code || currentInvoice.code || code
+        const activeInvoice = activeInvoiceCode === code
+            ? (currentInvoice || {})
+            : await odoo.getInvoice(activeInvoiceCode)
 
         const currentInvoiceState = invoiceState ? attachInvoiceStatus(invoiceState) : {
             code: code,
@@ -218,6 +223,7 @@ exports.getDetailByCode = async (req, res) => {
             invoiceEvents: allEvents || [],
             quickPurchaseRequests: allQuickPurchases || [],
             quickStockReceipts: allQuickReceipts || [],
+            transactions: allTransactions || [],
             phieus: allPhieus || [],
             packageCount: packageCount
         })

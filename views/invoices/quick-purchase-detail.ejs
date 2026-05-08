@@ -58,10 +58,28 @@
           </div>
         </div>
       </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Nhà cung cấp</div>
+            <div class="mt-2">{{ supplierDisplay() }}</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card shadow-sm mb-3">
       <div class="card-body">
+        <div class="form-row mb-3">
+          <div class="col-md-8">
+            <label>Nhà cung cấp nhập hàng</label>
+            <select class="form-control" v-model="draft.supplierCode" @change="selectSupplierByCode" :disabled="isLocked() || isLoadingSuppliers">
+              <option value="">Chọn nhà cung cấp</option>
+              <option v-for="supplier in suppliers" :value="supplier.code">{{ supplier.name }}{{ supplier.code ? ' (' + supplier.code + ')' : '' }}</option>
+            </select>
+            <div class="small text-muted mt-1" v-if="draft.supplierPhone">SĐT: {{ draft.supplierPhone }}</div>
+          </div>
+        </div>
         <div class="form-row align-items-end">
           <div class="col-md-10">
             <label>Tóm tắt</label>
@@ -134,9 +152,15 @@
         summary: '',
         supplierMessage: '',
         status: 'created',
+        supplierId: 0,
+        supplierCode: '',
+        supplierName: '',
+        supplierPhone: '',
         items: []
       },
       isLoading: false,
+      isLoadingSuppliers: false,
+      suppliers: [],
       statuses: [
         { key: 'created', title: 'Đã tạo' },
         { key: 'ordered', title: 'Đã đặt NCC' },
@@ -153,6 +177,10 @@
           this.draft = {
             summary: this.item.summary || '',
             supplierMessage: this.item.supplierMessage || this.buildSupplierMessage(this.item.items || []),
+            supplierId: Number(this.item.supplierId || 0),
+            supplierCode: this.item.supplierCode || '',
+            supplierName: this.item.supplierName || '',
+            supplierPhone: this.item.supplierPhone || '',
             items: Array.isArray(this.item.items) ? this.item.items.map(function (line) {
               return Object.assign({}, line)
             }) : []
@@ -187,6 +215,24 @@
           })
           .join('\n')
       },
+      loadSuppliers() {
+        this.isLoadingSuppliers = true
+        $.get('/api/suppliers', data => {
+          this.suppliers = Array.isArray(data) ? data : []
+        }).always(() => {
+          this.isLoadingSuppliers = false
+        })
+      },
+      selectSupplierByCode() {
+        var supplierCode = String(this.draft.supplierCode || '').trim()
+        var matched = this.suppliers.find(function (item) {
+          return String(item.code || '').trim() === supplierCode
+        })
+        this.draft.supplierId = matched ? Number(matched.id || 0) : 0
+        this.draft.supplierCode = matched ? (matched.code || '') : ''
+        this.draft.supplierName = matched ? (matched.name || '') : ''
+        this.draft.supplierPhone = matched ? (matched.contactNumber || '') : ''
+      },
       regenerateSupplierMessage() {
         this.draft.supplierMessage = this.buildSupplierMessage(this.draft.items)
       },
@@ -198,6 +244,10 @@
           alert('Vui lòng có nội dung gửi nhà cung cấp trước khi báo đã đặt hàng.')
           return
         }
+        if (!this.draft.supplierCode || !this.draft.supplierName) {
+          alert('Vui lòng chọn nhà cung cấp trước khi báo đã đặt hàng.')
+          return
+        }
         $.ajax({
           url: '/api/quick-purchase-requests/<%= quickPurchaseRequestId %>',
           method: 'PUT',
@@ -205,6 +255,10 @@
           data: JSON.stringify({
             summary: this.draft.summary,
             supplierMessage: this.draft.supplierMessage,
+            supplierId: this.draft.supplierId,
+            supplierCode: this.draft.supplierCode,
+            supplierName: this.draft.supplierName,
+            supplierPhone: this.draft.supplierPhone,
             status: 'ordered',
             items: this.draft.items
           })
@@ -234,6 +288,9 @@
       isLocked() {
         return ['ordered', 'received', 'cancelled'].includes(this.item.status)
       },
+      supplierDisplay() {
+        return this.item.supplierName || this.item.supplierCode || '-'
+      },
       statusTitle(status) {
         if (status === 'requested') {
           status = 'created'
@@ -257,6 +314,7 @@
       }
     },
     created() {
+      this.loadSuppliers()
       this.loadData()
     }
   })

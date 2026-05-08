@@ -10,7 +10,11 @@ module.exports = mongoose => {
       summary: String,
       createdByName: String,
       createdByUsername: String,
+      confirmedAt: Date,
+      confirmedByName: String,
+      confirmedByUsername: String,
       linkedQuickPurchaseRequestIds: Array,
+      receiptImages: Array,
       items: Array
     },
     { timestamps: true }

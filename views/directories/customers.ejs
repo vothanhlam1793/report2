@@ -1,0 +1,89 @@
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Customers',
+  pageTitle: 'Customers',
+  pageSubtitle: 'Danh sách khách hàng tham chiếu từ Odoo.',
+  currentPath: '/customers',
+  currentUser: currentUser
+}) %>
+<div id="customer-directory-page">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải danh sách khách hàng...</div>
+  </div>
+
+  <template v-if="!isLoading">
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="form-row align-items-end">
+          <div class="col-md-10">
+            <label>Tìm theo mã / tên / số điện thoại</label>
+            <input class="form-control" v-model="searchText" placeholder="VD: KH000749 hoặc Anh Duy">
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-outline-secondary btn-block" @click="loadData()">Làm mới</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <table class="table table-bordered table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Mã KH</th>
+              <th>Tên</th>
+              <th>Số điện thoại</th>
+              <th>Địa chỉ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in filteredItems" :key="item.id">
+              <td>{{ item.code || '-' }}</td>
+              <td>{{ item.name || '-' }}</td>
+              <td>{{ item.phone || '-' }}</td>
+              <td>{{ item.address || '-' }}</td>
+            </tr>
+            <tr v-if="!filteredItems.length">
+              <td colspan="4" class="text-center text-muted">Không có khách hàng phù hợp.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script>
+  new Vue({
+    el: '#customer-directory-page',
+    data: {
+      items: [],
+      isLoading: false,
+      searchText: ''
+    },
+    computed: {
+      filteredItems() {
+        var search = (this.searchText || '').trim().toLowerCase()
+        return (this.items || []).filter(function (item) {
+          var haystack = [item.code, item.name, item.phone, item.address].join(' ').toLowerCase()
+          return !search || haystack.includes(search)
+        })
+      }
+    },
+    methods: {
+      loadData() {
+        this.isLoading = true
+        $.get('/api/customer-directory', data => {
+          this.items = Array.isArray(data) ? data : []
+        }).always(() => {
+          this.isLoading = false
+        })
+      }
+    },
+    created() {
+      this.loadData()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>
