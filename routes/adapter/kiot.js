@@ -1,132 +1,126 @@
-var fetch = require("node-fetch");
-var objToken = {
-    date: new Date("2000-01-01"),
-    token: ""
-};
-async function getToken(){
-    if(((new Date()).getTime() - objToken.date.getTime()) > 85000*1000){
-        var clientId = process.env.KIOT_CLIENT_ID || '';
-        var clientSecret = process.env.KIOT_CLIENT_SECRET || '';
-        var res = await fetch("https://id.kiotviet.vn/connect/token", {
-            method: "POST",
-            body: `scopes=PublicApi.Access&grant_type=client_credentials&client_id=${clientId}&client_secret=${clientSecret}`,
-            headers:{
-                "Content-Type": "application/x-www-form-urlencoded"
-            } 
-        });
-        var data = await res.json();
-        objToken.date = new Date();
-        objToken.token = data.token_type + " " + data.access_token;
-    } 
-    return objToken.token;
+var fetch = require('node-fetch')
+
+var tokenCache = {
+  checkedAt: 0,
+  token: ''
 }
 
-async function getKiotViet(url){
-    var token = await getToken();
-    var retailer = process.env.KIOT_RETAILER || 'cretasolu';
-    var res = await fetch(url, {
-        method: "GET",
-        headers: {
-            Retailer: retailer,
-            Authorization: token
-        }
-    });
-    var data = await res.json();
-    return data;
+function getRetailer() {
+  return process.env.KIOT_RETAILER || 'cretasolu'
 }
 
-obj = {
-    total: 0,
-    pageSize: 20,
-    data: []
+function getConfiguredBranchIds() {
+  var raw = process.env.KIOT_BRANCH_ID || process.env.KIOT_BRANCH_IDS || ''
+  var parsed = String(raw)
+    .split(',')
+    .map(function (item) { return Number(String(item).trim()) })
+    .filter(function (item) { return Number.isFinite(item) && item > 0 })
+  if (parsed.length) {
+    return parsed
+  }
+  return [12961]
 }
 
-//currentItem
+function appendQuery(url, query) {
+  if (!query) {
+    return url
+  }
+  return url + (url.indexOf('?') >= 0 ? '&' : '?') + query
+}
 
-async function getFull(_url){
-    function appendUrl(aurl, c, p){
-        if(aurl.split("?").length == 2){
-            var b = aurl.split("?");
-            b[1] = b[1] + "&currentItem="+c+"&pageSize="+p;
-            return b.join("?");
-        } else {
-            return aurl + "?currentItem="+c+"&pageSize="+p;
-        }
+async function getToken() {
+  var now = Date.now()
+  if (tokenCache.token && now - tokenCache.checkedAt < 23 * 60 * 60 * 1000) {
+    return tokenCache.token
+  }
+
+  var clientId = process.env.KIOT_CLIENT_ID || ''
+  var clientSecret = process.env.KIOT_CLIENT_SECRET || ''
+  var res = await fetch('https://id.kiotviet.vn/connect/token', {
+    method: 'POST',
+    body: 'scopes=PublicApi.Access&grant_type=client_credentials&client_id=' + clientId + '&client_secret=' + clientSecret,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
     }
-    var currentItem = 0;
-    var pageSize = 100;
-    var rData = [];
-    data = await getKiotViet(appendUrl(_url, currentItem, pageSize));
-    rData = rData.concat(data.data);
-    for(var j = 1; j <= data.total/pageSize;j++){
-        console.log(j, currentItem, data.data.length);
-        currentItem = j*pageSize;
-        data = await getKiotViet(appendUrl(_url, currentItem, pageSize));
-        rData = rData.concat(data.data);
-    }
-    console.log(rData.length);
-    return rData;
+  })
+
+  if (!res.ok) {
+    throw new Error('KiotViet auth failed with status ' + res.status)
+  }
+
+  var data = await res.json()
+  tokenCache.checkedAt = now
+  tokenCache.token = data.token_type + ' ' + data.access_token
+  return tokenCache.token
 }
 
-// Dữ liệu sau khi lấy hàng loạt sẽ được lưu ở đây 100%
-var customers = [];
-var invoices = [];
-
-async function getFullCustomer(pNew) {
-    // Lấy dữ liệu với số lượng lớn
-    if(pNew){
-        // Khi nào đúng thì nó mới tải lại hàng loạt rồi gởi ra
-        var data = await getFull("https://public.kiotapi.com/customers?includeTotal=1&includeCustomerSocial=1&includeCustomerGroup=1");
-        customers = data;
+async function getKiotViet(url) {
+  var token = await getToken()
+  var res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Retailer: getRetailer(),
+      Authorization: token
     }
-    return customers;
+  })
+
+  if (!res.ok) {
+    var bodyText = await res.text()
+    throw new Error('KiotViet GET failed ' + res.status + ': ' + bodyText)
+  }
+
+  return res.json()
 }
 
-var dateCounter = ((new Date()).getTime() - 86400*1000*90);
-var dateCounterLast = 0;
-var dateCounterCounter = 0;
-async function getFullInvoice(pNew) {
-    if(pNew){
-        if(dateCounterCounter == 0){
-            dateCounterCounter += 1;
-        } else {
-            dateCounter = dateCounterLast;
-        }
-        var data = await getFull(`https://public.kiotapi.com/invoices?lastModifiedFrom=${(new Date(dateCounter)).toISOString()}`);
-        dateCounterLast = (new Date()).getTime();
-        data.forEach(function(inv1){
-            var temp = false;
+async function getFull(url) {
+  var currentItem = 0
+  var pageSize = 100
+  var result = []
 
-            invoices.forEach(function(inv2){
-                if(inv1.code == inv2.code){
-                    inv2.status = inv1.status;
-                    temp = true;
-                }
-            });
-            if(temp == false){
-                invoices.push(inv1);
-            }
-        });
-        invoices = invoices.filter(function(invoice){
-            return invoice.status != 2;
-        })
-        // invoices = data;
+  while (true) {
+    var pageUrl = appendQuery(url, 'currentItem=' + currentItem + '&pageSize=' + pageSize)
+    var data = await getKiotViet(pageUrl)
+    var rows = Array.isArray(data.data) ? data.data : []
+    result = result.concat(rows)
+    if (!rows.length || rows.length < pageSize) {
+      break
     }
-    return invoices;
+    currentItem += rows.length
+  }
+
+  return result
 }
-console.log("Đây là chỗ tải lần đầu");
-getFullCustomer(true);
-getFullInvoice(true);
 
-// Định kỳ nó phải lấy hết data của kiotviet để cập nhật - nó hơi ngu học thì phải :v
-setInterval(function(){
-    getFullInvoice(true);
-}, 2*60000);
-setInterval(function(){
-    getFullCustomer(true);
-}, 120*60000);
+async function getFullCustomer() {
+  return getFull('https://public.kiotapi.com/customers?includeTotal=1&includeCustomerSocial=1&includeCustomerGroup=1')
+}
 
-module.exports.getKiotViet = getKiotViet;
-module.exports.getFull = getFull;
-module.exports.getFullCustomer = getFullCustomer;
-module.exports.getFullInvoice = getFullInvoice;
+async function getFullInvoice() {
+  return getFull('https://public.kiotapi.com/invoices')
+}
+
+async function getFullProduct() {
+  var url = 'https://public.kiotapi.com/products?includeInventory=true'
+  var branchIds = getConfiguredBranchIds()
+  if (branchIds.length) {
+    url = appendQuery(url, 'BranchIds=' + branchIds.join(','))
+  }
+  return getFull(url)
+}
+
+async function getProductByCodeWithInventory(code) {
+  var url = 'https://public.kiotapi.com/products/code/' + code + '?includeInventory=true'
+  var branchIds = getConfiguredBranchIds()
+  if (branchIds.length) {
+    url = appendQuery(url, 'BranchIds=' + branchIds.join(','))
+  }
+  return getKiotViet(url)
+}
+
+module.exports.getKiotViet = getKiotViet
+module.exports.getConfiguredBranchIds = getConfiguredBranchIds
+module.exports.getProductByCodeWithInventory = getProductByCodeWithInventory
+module.exports.getFull = getFull
+module.exports.getFullCustomer = getFullCustomer
+module.exports.getFullInvoice = getFullInvoice
+module.exports.getFullProduct = getFullProduct

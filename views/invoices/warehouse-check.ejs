@@ -1,0 +1,527 @@
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Phiếu kiểm tra kho hàng',
+  pageTitle: 'Phiếu kiểm tra kho hàng',
+  pageSubtitle: 'Phiếu vận hành kho tham chiếu nội dung đơn từ Odoo, chỉ snapshot dữ liệu khi hoàn tất kiểm tra.',
+  currentPath: '/invoices/prepare',
+  currentUser: currentUser
+}) %>
+<div id="warehouse-check-page">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải phiếu kiểm tra kho...</div>
+  </div>
+
+  <template v-if="!isLoading">
+  <div class="app-step-chip">WHC draft | checking | completed | Invoice B1 -> B2 khi hoàn tất phiếu</div>
+  <div class="alert alert-warning" v-if="warning">
+    <div class="font-weight-bold">Cảnh báo thay đổi đơn</div>
+    <div>{{ warning.summary }}</div>
+    <div class="small mt-1" v-if="warning.previousInvoiceCode && warning.currentInvoiceCode">
+      Đối chiếu: {{ warning.previousInvoiceCode }} -> {{ warning.currentInvoiceCode }}
+    </div>
+    <ul class="mb-0 mt-2" v-if="warning.changes && warning.changes.length">
+      <li v-for="change in warning.changes" :key="change.productCode">
+        {{ change.productCode }} - {{ change.productName || 'Chưa có tên sản phẩm' }}: {{ change.previousQty }} -> {{ change.currentQty }}
+      </li>
+    </ul>
+  </div>
+
+  <div class="card shadow-sm mb-3" v-if="invoice.code">
+    <div class="card-body">
+      <div class="alert alert-light border mb-3" v-if="warehouseCheck.status !== 'completed'">
+        Đơn đang ở trạng thái {{ whcStatusTitle(warehouseCheck.status) }}. Danh sách mặt hàng và số liệu đang được tham chiếu động từ Odoo và tồn hiện tại.
+        <div class="small text-muted mt-1" v-if="inventoryBranchLabel()">Chi nhánh tồn kho đang tham chiếu: {{ inventoryBranchLabel() }}</div>
+      </div>
+      <div class="alert alert-success mb-3" v-else>
+        Phiếu đã hoàn tất. Bảng mặt hàng bên dưới là snapshot đã chốt tại thời điểm xác nhận kiểm tra kho.
+        <div class="small mt-1" v-if="inventoryBranchLabel()">Snapshot tồn kho được chốt theo chi nhánh: {{ inventoryBranchLabel() }}</div>
+      </div>
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h5 class="mb-1">{{ invoice.code }}</h5>
+          <div class="text-muted">Mã tham chiếu: {{ warehouseCheck.referenceCode }}</div>
+          <div class="text-muted">Khách: {{ invoice.customerName || invoice.customerCode || '-' }}</div>
+          <div class="mt-2">
+            <span class="badge mr-2" :class="whcBadgeClass(warehouseCheck.status)">{{ whcStatusTitle(warehouseCheck.status) }}</span>
+            <span class="badge" :class="conclusionBadgeClass(warehouseCheck.stockConclusion)">{{ conclusionTitle(warehouseCheck.stockConclusion) }}</span>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-outline-secondary" @click="refreshCheck()">Làm mới phiếu</button>
+          <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + invoice.code">Chi tiết đơn</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3" v-if="invoice.code">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="mb-1">Timeline xử lý</h5>
+          <div class="text-muted">Các action đã ghi theo mã tham chiếu {{ warehouseCheck.referenceCode || '-' }}</div>
+        </div>
+        <div class="text-muted small" v-if="invoiceEvents.length">{{ invoiceEvents.length }} sự kiện</div>
+      </div>
+
+      <div v-if="isLoadingEvents" class="text-muted">Đang tải timeline...</div>
+
+      <div v-else-if="invoiceEvents.length">
+        <div
+          class="border rounded p-3 mb-2"
+          v-for="event in invoiceEvents"
+          :key="event.id"
+        >
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="font-weight-bold">{{ eventTitle(event) }}</div>
+              <div class="text-muted">{{ event.summary || 'Không có mô tả' }}</div>
+            </div>
+            <span class="badge" :class="eventBadgeClass(event)">{{ eventStatusLabel(event) }}</span>
+          </div>
+
+          <div class="small text-muted mt-2">
+            {{ formatEventMeta(event) }}
+          </div>
+
+          <div class="small mt-2" v-if="eventExtraText(event)">
+            {{ eventExtraText(event) }}
+          </div>
+        </div>
+      </div>
+
+      <div class="text-muted" v-else>Chưa có log xử lý cho phiếu này.</div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <table class="table table-bordered table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Mã SP</th>
+            <th>Tên sản phẩm</th>
+            <th>SL cần</th>
+            <th>Tồn Kiot</th>
+            <th>Nhập nhanh</th>
+            <th>Tổng khả dụng</th>
+            <th>Kết luận</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="line in warehouseCheck.lines" :key="line.productCode">
+            <td>{{ line.productCode }}</td>
+            <td>{{ line.productName }}</td>
+            <td>{{ line.requiredQty }}</td>
+            <td>{{ line.kiotStockQty }}</td>
+            <td>{{ line.quickReceiptQty }}</td>
+            <td>{{ line.availableQty }}</td>
+            <td>
+              <span class="badge" :class="line.isEnough ? 'badge-success' : 'badge-warning'">
+                {{ line.isEnough ? 'Đủ' : 'Thiếu' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body d-flex justify-content-between align-items-center">
+      <div>
+        <div class="font-weight-bold">Kết luận hiện tại</div>
+        <div class="text-muted">{{ stockSummary() }}</div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline-primary" @click="confirmEnough()" :disabled="warehouseCheck.status === 'completed'">Xác nhận kiểm tra kho</button>
+        <a class="btn btn-outline-warning" :href="'/invoices/shortage'" v-if="warehouseCheck.stockConclusion === 'shortage' || hasShortage()">Sang trang Thiếu hàng</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-3" v-if="hasShortage()">
+    <div class="col-lg-7 mb-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Đặt hàng nhanh</h5>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-warning" @click="openQuickPurchaseModal()">Tạo phiếu</button>
+              <a class="btn btn-outline-secondary" href="/invoices/quick-purchase">Danh sách phiếu</a>
+            </div>
+          </div>
+          <div class="text-muted mb-2">Dùng khi Sale chọn hướng đặt hàng cho các mã đang thiếu. Hệ thống sẽ đề xuất số lượng cần đặt theo shortage hiện tại.</div>
+          <ul class="list-group list-group-flush" v-if="quickPurchaseRequests.length">
+            <li class="list-group-item" v-for="item in quickPurchaseRequests" :key="item.id">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  {{ item.createdAt ? moment(item.createdAt).format('DD/MM HH:mm') : '-' }} - {{ item.summary || 'Phiếu đặt hàng nhanh' }}
+                </div>
+                <a class="btn btn-sm btn-outline-primary" :href="'/invoices/quick-purchase/' + item.id">Mở phiếu</a>
+              </div>
+            </li>
+          </ul>
+          <div class="text-muted" v-else>Chưa có phiếu đặt hàng nhanh.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5 mb-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Yêu cầu sale đổi đơn</h5>
+          </div>
+          <div class="text-muted mb-2">Dùng khi kho xác định cần đổi sang version đơn khác. Bắt buộc nhập lý do để Sale xử lý tiếp.</div>
+          <div class="form-group">
+            <label>Lý do yêu cầu đổi đơn</label>
+            <textarea class="form-control" rows="4" v-model="changeOrderReason" placeholder="Ví dụ: hàng thay đổi cấu hình, mã hiện tại không còn phù hợp..."></textarea>
+          </div>
+          <button class="btn btn-outline-danger" @click="requestSaleChangeOrder()">Gửi yêu cầu sale đổi đơn</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="quickPurchaseModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Tạo phiếu đặt hàng nhanh</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Tóm tắt</label>
+            <input class="form-control" v-model="quickPurchaseDraft.summary">
+          </div>
+
+          <table class="table table-bordered table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Mã SP</th>
+                <th>Tên sản phẩm</th>
+                <th>SL cần</th>
+                <th>Tổng khả dụng</th>
+                <th>Đề xuất đặt</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="line in quickPurchaseDraft.items" :key="line.productCode">
+                <td>{{ line.productCode }}</td>
+                <td>{{ line.productName }}</td>
+                <td>{{ line.requiredQty }}</td>
+                <td>{{ line.availableQty }}</td>
+                <td style="width: 180px;">
+                  <input
+                    type="number"
+                    min="0"
+                    class="form-control"
+                    v-model.number="line.requestedQty"
+                  >
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-outline-warning" @click="submitQuickPurchase()">Tạo phiếu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </template>
+</div>
+
+<script>
+  function showModalById(id) {
+    var el = document.getElementById(id)
+    if (!el) {
+      return
+    }
+    if (window.bootstrap && window.bootstrap.Modal) {
+      if (typeof window.bootstrap.Modal.getOrCreateInstance === 'function') {
+        window.bootstrap.Modal.getOrCreateInstance(el).show()
+        return
+      }
+      var existingInstance = typeof window.bootstrap.Modal.getInstance === 'function'
+        ? window.bootstrap.Modal.getInstance(el)
+        : null
+      var instance = existingInstance || new window.bootstrap.Modal(el)
+      instance.show()
+      return
+    }
+    el.style.display = 'block'
+    el.classList.add('show')
+    el.removeAttribute('aria-hidden')
+  }
+
+  function hideModalById(id) {
+    var el = document.getElementById(id)
+    if (!el) {
+      return
+    }
+    if (window.bootstrap && window.bootstrap.Modal) {
+      var instance = typeof window.bootstrap.Modal.getInstance === 'function'
+        ? window.bootstrap.Modal.getInstance(el)
+        : null
+      if (instance) {
+        instance.hide()
+      } else {
+        el.style.display = 'none'
+        el.classList.remove('show')
+        el.setAttribute('aria-hidden', 'true')
+      }
+      return
+    }
+    el.style.display = 'none'
+    el.classList.remove('show')
+    el.setAttribute('aria-hidden', 'true')
+  }
+
+  new Vue({
+    el: '#warehouse-check-page',
+    data: {
+      invoice: {},
+      warehouseCheck: { lines: [] },
+      warning: null,
+      quickPurchaseRequests: [],
+      quickStockReceipts: [],
+      invoiceEvents: [],
+      isLoading: false,
+      isLoadingEvents: false,
+      changeOrderReason: '',
+      quickPurchaseDraft: {
+        summary: 'Tạo nhanh từ phiếu kiểm tra kho',
+        items: []
+      }
+    },
+    methods: {
+      loadData() {
+        var params = new URLSearchParams(window.location.search)
+        var code = params.get('code') || ''
+        if (!code) {
+          return
+        }
+        this.isLoading = true
+        $.get('/api/warehouse-checks/invoice/' + code, data => {
+          this.invoice = data.currentInvoice || {}
+          this.warehouseCheck = data.warehouseCheck || { lines: [] }
+          this.warning = data.latestWarning || null
+          this.quickPurchaseRequests = data.quickPurchaseRequests || []
+          this.quickStockReceipts = data.quickStockReceipts || []
+          this.loadInvoiceEvents()
+        }).always(() => {
+          this.isLoading = false
+        })
+      },
+      loadInvoiceEvents() {
+        var referenceCode = this.warehouseCheck.referenceCode || ''
+        if (!referenceCode) {
+          this.invoiceEvents = []
+          return
+        }
+        this.isLoadingEvents = true
+        $.get('/api/invoice-events?referenceCode=' + encodeURIComponent(referenceCode), data => {
+          this.invoiceEvents = Array.isArray(data) ? data : []
+        }).always(() => {
+          this.isLoadingEvents = false
+        })
+      },
+      refreshCheck() {
+        var params = new URLSearchParams(window.location.search)
+        var code = params.get('code') || ''
+        $.post('/api/warehouse-checks/invoice/' + code + '/refresh').done(() => this.loadData())
+      },
+      confirmEnough() {
+        var params = new URLSearchParams(window.location.search)
+        var code = params.get('code') || ''
+        $.post('/api/warehouse-checks/invoice/' + code + '/confirm-enough').done(() => this.loadData())
+      },
+      openQuickPurchaseModal() {
+        this.quickPurchaseDraft = {
+          summary: 'Tạo nhanh từ phiếu kiểm tra kho',
+          items: (this.warehouseCheck.lines || []).map(function (line) {
+            return {
+              productCode: line.productCode,
+              productName: line.productName,
+              requiredQty: Number(line.requiredQty || 0),
+              availableQty: Number(line.availableQty || 0),
+              requestedQty: line.isEnough ? 0 : Math.max(Number(line.requiredQty || 0) - Number(line.availableQty || 0), 0)
+            }
+          })
+        }
+        showModalById('quickPurchaseModal')
+      },
+      submitQuickPurchase() {
+        var params = new URLSearchParams(window.location.search)
+        var code = params.get('code') || ''
+        $.ajax({
+          url: '/api/warehouse-checks/invoice/' + code + '/quick-purchase',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({
+            summary: this.quickPurchaseDraft.summary,
+            items: this.quickPurchaseDraft.items
+          })
+        }).done(data => {
+          hideModalById('quickPurchaseModal')
+          if (data && data.id) {
+            window.location.href = '/invoices/quick-purchase/' + data.id
+            return
+          }
+          this.loadData()
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không thể tạo phiếu đặt hàng nhanh')
+        })
+      },
+      requestSaleChangeOrder() {
+        var reason = (this.changeOrderReason || '').trim()
+        if (!reason) {
+          alert('Vui lòng nhập lý do yêu cầu Sale đổi đơn.')
+          return
+        }
+        var params = new URLSearchParams(window.location.search)
+        var code = params.get('code') || ''
+        $.ajax({
+          url: '/api/warehouse-checks/invoice/' + code + '/shortage-decision',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({
+            saleDecision: 'change_order',
+            summary: reason
+          })
+        }).done(() => {
+          this.changeOrderReason = ''
+          this.loadData()
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không thể gửi yêu cầu đổi đơn')
+        })
+      },
+      hasShortage() {
+        return (this.warehouseCheck.lines || []).some(function (line) {
+          return !line.isEnough
+        })
+      },
+      stockSummary() {
+        if (this.hasShortage()) {
+          return 'Có sản phẩm đang thiếu. Kho cần chuyển Sale quyết định đổi đơn hoặc đặt hàng.'
+        }
+        return 'Tất cả sản phẩm hiện đủ điều kiện xác nhận đã đủ hàng.'
+      },
+      eventTitle(event) {
+        var eventTypeMap = {
+          warehouse_check_created: 'Tạo phiếu kiểm tra kho',
+          warehouse_check_refreshed: 'Làm mới phiếu kiểm tra kho',
+          warehouse_check_confirmed: 'Xác nhận đủ hàng',
+          warehouse_check_completed: 'Hoàn tất phiếu kiểm tra kho',
+          warehouse_check_shortage_detected: 'Kết luận thiếu hàng',
+          sale_decision_purchase_more: 'Sale chọn đặt hàng thêm',
+          sale_decision_change_order: 'Sale chọn đổi đơn',
+          sale_change_requested: 'Kho yêu cầu Sale đổi đơn',
+          quick_purchase_created: 'Tạo phiếu đặt hàng nhanh',
+          quick_stock_receipt_created: 'Tạo phiếu nhập hàng nhanh',
+          auto_closed_legacy_invoice: 'Tự động đóng dữ liệu cũ'
+        }
+        return eventTypeMap[event.eventType] || event.eventType || 'Sự kiện xử lý'
+      },
+      eventStatusLabel(event) {
+        if (event.fromStatus && event.toStatus) {
+          return event.fromStatus + ' -> ' + event.toStatus
+        }
+        if (event.toStatus) {
+          return event.toStatus
+        }
+        return 'Log'
+      },
+      eventBadgeClass(event) {
+        if (event.toStatus === 'B10') {
+          return 'badge-danger'
+        }
+        if (event.eventType === 'warehouse_check_completed' || event.toStatus === 'B2') {
+          return 'badge-success'
+        }
+        if (event.toStatus === 'B4' || event.eventType === 'warehouse_check_confirmed') {
+          return 'badge-success'
+        }
+        if (event.toStatus === 'B3' || event.eventType === 'warehouse_check_shortage_detected') {
+          return 'badge-warning'
+        }
+        return 'badge-secondary'
+      },
+      formatEventMeta(event) {
+        var actor = event.actorName || event.actorUsername || event.actorRole || 'Hệ thống'
+        var time = event.createdAt ? moment(event.createdAt).format('DD/MM/YYYY HH:mm') : '-'
+        var invoiceCode = event.invoiceCode || this.invoice.code || '-'
+        return actor + ' | ' + time + ' | ' + invoiceCode
+      },
+      eventExtraText(event) {
+        var payload = event.payload || {}
+        if (payload.replacementInvoiceCode) {
+          return 'Đơn thay thế: ' + payload.replacementInvoiceCode
+        }
+        if (typeof payload.shortageCount === 'number') {
+          return 'Số mã đang thiếu: ' + payload.shortageCount
+        }
+        if (typeof payload.itemCount === 'number') {
+          return 'Số dòng liên quan: ' + payload.itemCount
+        }
+        if (payload.relatedInvoiceCodes && payload.relatedInvoiceCodes.length) {
+          return 'Các version liên quan: ' + payload.relatedInvoiceCodes.join(', ')
+        }
+        return ''
+      },
+      whcStatusTitle(status) {
+        var map = {
+          draft: 'Draft',
+          checking: 'Đang kiểm tra',
+          completed: 'Đã hoàn tất'
+        }
+        return map[status] || status || 'Draft'
+      },
+      whcBadgeClass(status) {
+        var map = {
+          draft: 'badge-secondary',
+          checking: 'badge-warning',
+          completed: 'badge-success'
+        }
+        return map[status] || 'badge-light'
+      },
+      conclusionTitle(value) {
+        var map = {
+          enough: 'Đủ hàng',
+          shortage: 'Thiếu hàng'
+        }
+        return map[value] || 'Chưa kết luận'
+      },
+      conclusionBadgeClass(value) {
+        var map = {
+          enough: 'badge-success',
+          shortage: 'badge-danger'
+        }
+        return map[value] || 'badge-light'
+      },
+      inventoryBranchLabel() {
+        var branch = this.warehouseCheck.inventoryBranch || {}
+        if (branch.branchName && branch.branchId) {
+          return branch.branchName + ' (' + branch.branchId + ')'
+        }
+        if (branch.branchName) {
+          return branch.branchName
+        }
+        if (branch.branchId) {
+          return 'Branch ' + branch.branchId
+        }
+        return ''
+      }
+    },
+    created() {
+      this.loadData()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>

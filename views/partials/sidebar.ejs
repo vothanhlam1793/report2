@@ -1,0 +1,40 @@
+<%
+  var currentPath = currentPath || ''
+  var currentUser = currentUser || null
+  function isActive(path) {
+    return currentPath === path || currentPath.indexOf(path + '/') === 0
+  }
+%>
+<aside class="app-sidebar">
+  <a class="app-sidebar-brand" href="/invoices/dashboard">CRETA Ops</a>
+
+  <div class="app-sidebar-section">
+    <div class="app-sidebar-label">VẬN HÀNH</div>
+    <a class="app-sidebar-link <%= isActive('/invoices/dashboard') ? 'active' : '' %>" href="/invoices/dashboard">Dashboard</a>
+    <a class="app-sidebar-link <%= isActive('/invoices/prepare') ? 'active' : '' %>" href="/invoices/prepare">Cần duyệt kho</a>
+    <a class="app-sidebar-link <%= isActive('/invoices/package') ? 'active' : '' %>" href="/invoices/package">Đóng hàng</a>
+    <a class="app-sidebar-link <%= isActive('/invoices/ship') ? 'active' : '' %>" href="/invoices/ship">Giao chành</a>
+  </div>
+
+  <% if (currentUser && currentUser.role === 'admin') { %>
+  <div class="app-sidebar-section">
+    <div class="app-sidebar-label">QUẢN TRỊ CUNG ỨNG</div>
+    <a class="app-sidebar-link <%= isActive('/invoices/shortage') ? 'active' : '' %>" href="/invoices/shortage">Xử lý thiếu hàng</a>
+    <a class="app-sidebar-link <%= isActive('/invoices/quick-purchase') ? 'active' : '' %>" href="/invoices/quick-purchase">Phiếu đặt hàng nhanh</a>
+    <a class="app-sidebar-link <%= isActive('/invoices/quick-receipt') ? 'active' : '' %>" href="/invoices/quick-receipt">Phiếu nhập hàng nhanh</a>
+  </div>
+  <% } %>
+
+  <div class="app-sidebar-section">
+    <div class="app-sidebar-label">TRA CỨU</div>
+    <a class="app-sidebar-link <%= currentPath === '/invoices' ? 'active' : '' %>" href="/invoices">Danh sách hóa đơn</a>
+    <a class="app-sidebar-link <%= isActive('/invoices/summary') ? 'active' : '' %>" href="/invoices/summary">Báo cáo tổng hợp</a>
+  </div>
+
+  <% if (currentUser && currentUser.role === 'admin') { %>
+    <div class="app-sidebar-section">
+      <div class="app-sidebar-label">Hệ thống</div>
+      <a class="app-sidebar-link <%= currentPath === '/users' ? 'active' : '' %>" href="/users">Users</a>
+    </div>
+  <% } %>
+</aside>

@@ -1,0 +1,23 @@
+<div class="app-topbar">
+  <div>
+    <h1 class="app-topbar-title"><%= pageTitle || title || 'CRETA Ops' %></h1>
+    <% if (pageSubtitle) { %>
+      <p class="app-topbar-subtitle"><%= pageSubtitle %></p>
+    <% } %>
+  </div>
+
+  <% if (currentUser) { %>
+    <div class="d-flex align-items-center" style="gap: 12px;">
+      <div class="app-user-chip">
+        <div>
+          <div class="font-weight-bold"><%= currentUser.name || currentUser.username %></div>
+          <div class="text-muted small"><%= currentUser.username %></div>
+        </div>
+        <span class="badge badge-dark app-role-badge"><%= currentUser.role %></span>
+      </div>
+      <form method="post" action="/logout" class="mb-0">
+        <button type="submit" class="btn btn-outline-secondary">Đăng xuất</button>
+      </form>
+    </div>
+  <% } %>
+</div>

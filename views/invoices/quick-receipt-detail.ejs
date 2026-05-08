@@ -1,0 +1,194 @@
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Chi tiết phiếu nhập hàng nhanh',
+  pageTitle: 'Chi tiết phiếu nhập hàng nhanh',
+  pageSubtitle: 'Đối tượng độc lập dùng để xác nhận hàng về, có thể tham chiếu từ nhiều phiếu đặt hàng nhanh.',
+  currentPath: '/invoices/quick-receipt',
+  currentUser: currentUser
+}) %>
+<div id="quick-receipt-detail-page">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải chi tiết phiếu nhập hàng nhanh...</div>
+  </div>
+
+  <template v-if="!isLoading && item.id">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <div class="app-step-chip">Quick Stock Receipt | Entity độc lập</div>
+        <h2 class="h4 mb-1">Phiếu {{ item.id }}</h2>
+        <div class="text-muted">Mã tham chiếu: {{ item.referenceCode || '-' }}</div>
+      </div>
+      <div class="btn-group">
+        <a class="btn btn-outline-dark" :href="'/invoices/warehouse-check?code=' + item.invoiceCode">Phiếu kho</a>
+        <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + item.invoiceCode">Chi tiết đơn</a>
+        <a class="btn btn-outline-secondary" href="/invoices/quick-receipt">Danh sách phiếu</a>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Trạng thái</div>
+            <div class="mt-2"><span class="badge" :class="statusBadgeClass(item.status)">{{ statusTitle(item.status) }}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Mã đơn</div>
+            <div class="mt-2">{{ item.invoiceCode || '-' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Số purchase tham chiếu</div>
+            <div class="mt-2">{{ Array.isArray(item.linkedQuickPurchaseRequestIds) ? item.linkedQuickPurchaseRequestIds.length : 0 }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Ngày tạo</div>
+            <div class="mt-2">{{ item.createdAt ? moment(item.createdAt).format('DD/MM/YYYY HH:mm') : '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="form-row align-items-end">
+          <div class="col-md-7">
+            <label>Tóm tắt</label>
+            <input class="form-control" v-model="draft.summary">
+          </div>
+          <div class="col-md-3">
+            <label>Trạng thái</label>
+            <select class="form-control" v-model="draft.status">
+              <option v-for="status in statuses" :value="status.key">{{ status.title }}</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-outline-primary btn-block" @click="saveChanges()">Lưu phiếu</button>
+          </div>
+        </div>
+        <div class="mt-3 d-flex justify-content-end">
+          <button class="btn btn-outline-danger" @click="cancelReceipt()" :disabled="draft.status === 'cancelled'">Hủy phiếu</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-3">Danh sách mã hàng nhận</h5>
+        <table class="table table-bordered table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Mã SP</th>
+              <th>Tên sản phẩm</th>
+              <th>SL tham chiếu</th>
+              <th>SL nhận</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="line in draft.items" :key="line.productCode">
+              <td>{{ line.productCode || '-' }}</td>
+              <td>{{ line.productName || '-' }}</td>
+              <td>{{ line.requiredQty || 0 }}</td>
+              <td style="width: 220px;">
+                <input type="number" min="0" class="form-control" v-model.number="line.receivedQty">
+              </td>
+            </tr>
+            <tr v-if="!draft.items || draft.items.length === 0">
+              <td colspan="4" class="text-center text-muted">Phiếu chưa có dòng hàng.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <div class="alert alert-warning" v-if="!isLoading && !item.id">
+    Không tìm thấy phiếu nhập hàng nhanh.
+  </div>
+</div>
+
+<script>
+  new Vue({
+    el: '#quick-receipt-detail-page',
+    data: {
+      item: {},
+      draft: {
+        summary: '',
+        status: 'created',
+        linkedQuickPurchaseRequestIds: [],
+        items: []
+      },
+      isLoading: false,
+      statuses: [
+        { key: 'created', title: 'Tạo mới' },
+        { key: 'confirmed', title: 'Đã kiểm hàng + minh chứng' },
+        { key: 'cancelled', title: 'Đã hủy' }
+      ]
+    },
+    methods: {
+      loadData() {
+        this.isLoading = true
+        $.get('/api/quick-stock-receipts/<%= quickStockReceiptId %>', data => {
+          this.item = data || {}
+          this.draft = {
+            summary: this.item.summary || '',
+            status: this.item.status || 'created',
+            linkedQuickPurchaseRequestIds: Array.isArray(this.item.linkedQuickPurchaseRequestIds) ? this.item.linkedQuickPurchaseRequestIds : [],
+            items: Array.isArray(this.item.items) ? this.item.items.map(function (line) { return Object.assign({}, line) }) : []
+          }
+        }).always(() => {
+          this.isLoading = false
+        })
+      },
+      saveChanges() {
+        $.ajax({
+          url: '/api/quick-stock-receipts/<%= quickStockReceiptId %>',
+          method: 'PUT',
+          contentType: 'application/json',
+          data: JSON.stringify(this.draft)
+        }).done(data => {
+          this.item = data || {}
+          this.loadData()
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không thể lưu phiếu nhập hàng nhanh')
+        })
+      },
+      cancelReceipt() {
+        if (!window.confirm('Xác nhận hủy phiếu nhập hàng nhanh này?')) {
+          return
+        }
+        this.draft.status = 'cancelled'
+        this.saveChanges()
+      },
+      statusTitle(status) {
+        var matched = this.statuses.find(function (item) {
+          return item.key === status
+        })
+        return matched ? matched.title : (status || '-')
+      },
+      statusBadgeClass(status) {
+        var map = {
+          created: 'badge-warning',
+          confirmed: 'badge-success',
+          cancelled: 'badge-dark'
+        }
+        return map[status] || 'badge-secondary'
+      }
+    },
+    created() {
+      this.loadData()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>

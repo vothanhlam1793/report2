@@ -1,0 +1,394 @@
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Phiếu nhập hàng nhanh',
+  pageTitle: 'Phiếu nhập hàng nhanh',
+  pageSubtitle: 'Đối tượng độc lập dùng để xác nhận hàng về và có thể tham chiếu từ một hoặc nhiều phiếu đặt hàng nhanh.',
+  currentPath: '/invoices/quick-receipt',
+  currentUser: currentUser
+}) %>
+<div id="quick-receipt-page">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải phiếu nhập hàng nhanh...</div>
+  </div>
+
+  <template v-if="!isLoading">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="text-muted">Có thể tạo mới một phiếu nhập hàng nhanh độc lập và tham chiếu từ nhiều phiếu đặt hàng nhanh.</div>
+      <button class="btn btn-outline-primary" @click="openCreateModal()">Tạo phiếu mới</button>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Tổng phiếu</div>
+            <div class="display-4">{{ items.length }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Created</div>
+            <div class="display-4">{{ countByStatus('created') }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Confirmed</div>
+            <div class="display-4">{{ countByStatus('confirmed') }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Cancelled</div>
+            <div class="display-4">{{ countByStatus('cancelled') }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="form-row align-items-end">
+          <div class="col-md-4">
+            <label>Trạng thái</label>
+            <div class="border rounded p-2">
+              <div class="form-check form-check-inline mr-3" v-for="status in statuses" :key="status.key">
+                <input class="form-check-input" type="checkbox" :id="'receipt-status-' + status.key" :value="status.key" v-model="selectedStatuses">
+                <label class="form-check-label" :for="'receipt-status-' + status.key">{{ status.title }}</label>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label>Tìm theo mã tham chiếu / mã đơn / tóm tắt</label>
+            <input class="form-control" v-model="searchText" placeholder="VD: HD020696 hoặc nhập hàng nhanh">
+          </div>
+          <div class="col-md-2">
+            <label>Page size</label>
+            <select class="form-control" v-model.number="pageSize">
+              <option v-for="size in pageSizes" :value="size">{{ size }}</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-outline-secondary btn-block" @click="refreshAll()">Làm mới</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <table class="table table-bordered table-hover">
+          <thead>
+            <tr>
+              <th>Mã tham chiếu</th>
+              <th>Mã đơn</th>
+              <th>Trạng thái</th>
+              <th>Tóm tắt</th>
+              <th>Liên kết purchase</th>
+              <th>Ngày tạo</th>
+              <th>Liên kết</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in paginatedItems" :key="item.id">
+              <td>{{ item.referenceCode || '-' }}</td>
+              <td>{{ item.invoiceCode || '-' }}</td>
+              <td><span class="badge" :class="statusBadgeClass(item.status)">{{ statusTitle(item.status) }}</span></td>
+              <td>{{ item.summary || '-' }}</td>
+              <td>{{ Array.isArray(item.linkedQuickPurchaseRequestIds) ? item.linkedQuickPurchaseRequestIds.length : 0 }}</td>
+              <td>{{ item.createdAt ? moment(item.createdAt).format('DD/MM/YYYY HH:mm') : '-' }}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <a class="btn btn-outline-primary" :href="'/invoices/quick-receipt/' + item.id">Mở phiếu</a>
+                  <a class="btn btn-outline-dark" :href="'/invoices/warehouse-check?code=' + item.invoiceCode">Phiếu kho</a>
+                  <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + item.invoiceCode">Chi tiết</a>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!paginatedItems.length">
+              <td colspan="7" class="text-center text-muted">Chưa có phiếu nhập hàng nhanh.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center mt-3" v-if="filteredItems.length">
+          <div class="text-muted small">Hiển thị {{ rangeStart }}-{{ rangeEnd }} / {{ filteredItems.length }} phiếu</div>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" @click="goToPage(currentPage - 1)" :disabled="currentPage <= 1">Trước</button>
+            <button class="btn btn-outline-secondary disabled">Trang {{ currentPage }} / {{ totalPages }}</button>
+            <button class="btn btn-outline-secondary" @click="goToPage(currentPage + 1)" :disabled="currentPage >= totalPages">Sau</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="isCreateModalOpen" class="position-fixed w-100 h-100" style="left: 0; top: 0; background: rgba(0, 0, 0, 0.45); z-index: 1050; overflow-y: auto;">
+      <div class="container py-4">
+        <div class="card shadow-lg mx-auto" style="max-width: 1100px;">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Tạo phiếu nhập hàng nhanh</h5>
+            <button type="button" class="close" aria-label="Close" @click="closeCreateModal()">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Chọn phiếu đặt hàng nhanh tham chiếu</label>
+              <div class="border rounded p-2" style="max-height: 220px; overflow-y: auto;">
+                <div class="form-check" v-for="purchase in availablePurchases" :key="purchase.id">
+                  <input class="form-check-input" type="checkbox" :id="'receipt-purchase-' + purchase.id" :value="purchase.id" v-model="createDraft.linkedQuickPurchaseRequestIds">
+                  <label class="form-check-label" :for="'receipt-purchase-' + purchase.id">
+                    {{ purchase.invoiceCode }} | {{ purchase.summary || 'Phiếu đặt hàng nhanh' }}
+                  </label>
+                </div>
+              </div>
+              <button class="btn btn-outline-secondary btn-sm mt-2" @click="loadReceiptPrefill()">Nạp từ Quick Purchase</button>
+            </div>
+
+            <div class="form-group">
+              <label>Tóm tắt</label>
+              <input class="form-control" v-model="createDraft.summary">
+            </div>
+
+            <table class="table table-bordered table-hover mb-0" v-if="createDraft.items.length">
+              <thead>
+                <tr>
+                  <th>Mã SP</th>
+                  <th>Tên sản phẩm</th>
+                  <th>SL tham chiếu</th>
+                  <th>SL nhận</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="line in createDraft.items" :key="line.productCode">
+                  <td>{{ line.productCode }}</td>
+                  <td>{{ line.productName }}</td>
+                  <td>{{ line.requiredQty }}</td>
+                  <td style="width: 220px;">
+                    <input type="number" min="0" class="form-control" v-model.number="line.receivedQty">
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="text-muted mt-2" v-else>Chọn ít nhất một Quick Purchase rồi bấm `Nạp từ Quick Purchase` để sync hàng sang phiếu nhập.</div>
+          </div>
+          <div class="card-footer d-flex justify-content-end">
+            <button type="button" class="btn btn-outline-secondary mr-2" @click="closeCreateModal()">Đóng</button>
+            <button type="button" class="btn btn-outline-primary" @click="createReceipt()">Tạo phiếu</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<script src="/js/invoice-status.js"></script>
+<script>
+  var QUICK_RECEIPT_STORAGE_KEY = 'report2.quickReceipt.filters.v1'
+
+  new Vue({
+    el: '#quick-receipt-page',
+    data: {
+      items: [],
+      availablePurchases: [],
+      isLoading: false,
+      isCreateModalOpen: false,
+      selectedStatuses: ['created', 'confirmed', 'cancelled'],
+      searchText: '',
+      pageSize: 30,
+      currentPage: 1,
+      pageSizes: [10, 20, 30, 50, 100],
+      createDraft: {
+        referenceCode: '',
+        invoiceCode: '',
+        summary: 'Tạo nhanh từ phiếu nhập hàng nhanh',
+        linkedQuickPurchaseRequestIds: [],
+        items: []
+      },
+      statuses: [
+        { key: 'created', title: 'Tạo mới' },
+        { key: 'confirmed', title: 'Đã kiểm hàng + minh chứng' },
+        { key: 'cancelled', title: 'Đã hủy' }
+      ]
+    },
+    computed: {
+      filteredItems() {
+        var search = this.searchText.trim().toLowerCase()
+        return this.items.filter(item => {
+          var matchesStatus = !this.selectedStatuses.length || this.selectedStatuses.includes(item.status)
+          var haystack = [item.referenceCode, item.invoiceCode, item.summary, item.createdByName, item.createdByUsername].join(' ').toLowerCase()
+          var matchesSearch = !search || haystack.includes(search)
+          return matchesStatus && matchesSearch
+        })
+      },
+      totalPages() {
+        return Math.max(1, Math.ceil(this.filteredItems.length / this.pageSize))
+      },
+      paginatedItems() {
+        var start = (this.currentPage - 1) * this.pageSize
+        return this.filteredItems.slice(start, start + this.pageSize)
+      },
+      rangeStart() {
+        if (!this.filteredItems.length) {
+          return 0
+        }
+        return (this.currentPage - 1) * this.pageSize + 1
+      },
+      rangeEnd() {
+        return Math.min(this.currentPage * this.pageSize, this.filteredItems.length)
+      }
+    },
+    methods: {
+      loadPersistedState() {
+        try {
+          var raw = window.localStorage.getItem(QUICK_RECEIPT_STORAGE_KEY)
+          if (!raw) {
+            return
+          }
+          var saved = JSON.parse(raw)
+          if (Array.isArray(saved.selectedStatuses)) {
+            this.selectedStatuses = saved.selectedStatuses
+          }
+          if (typeof saved.searchText === 'string') {
+            this.searchText = saved.searchText
+          }
+          if (this.pageSizes.includes(Number(saved.pageSize))) {
+            this.pageSize = Number(saved.pageSize)
+          }
+          if (Number(saved.currentPage) > 0) {
+            this.currentPage = Number(saved.currentPage)
+          }
+        } catch (e) {}
+      },
+      persistState() {
+        try {
+          window.localStorage.setItem(QUICK_RECEIPT_STORAGE_KEY, JSON.stringify({
+            selectedStatuses: this.selectedStatuses,
+            searchText: this.searchText,
+            pageSize: this.pageSize,
+            currentPage: this.currentPage
+          }))
+        } catch (e) {}
+      },
+      goToPage(page) {
+        this.currentPage = Math.max(1, Math.min(page, this.totalPages))
+      },
+      openCreateModal() {
+        this.createDraft = {
+          referenceCode: '',
+          invoiceCode: '',
+          summary: 'Tạo nhanh từ phiếu nhập hàng nhanh',
+          linkedQuickPurchaseRequestIds: [],
+          items: []
+        }
+        this.isCreateModalOpen = true
+      },
+      closeCreateModal() {
+        this.isCreateModalOpen = false
+      },
+      loadReceiptPrefill() {
+        if (!this.createDraft.linkedQuickPurchaseRequestIds.length) {
+          alert('Vui lòng chọn ít nhất một Quick Purchase.')
+          return
+        }
+        $.get('/api/quick-stock-receipts/prefill', {
+          quickPurchaseRequestIds: this.createDraft.linkedQuickPurchaseRequestIds.join(',')
+        }, data => {
+          this.createDraft.referenceCode = data.referenceCode || ''
+          this.createDraft.invoiceCode = data.invoiceCode || ''
+          this.createDraft.summary = data.summary || this.createDraft.summary
+          this.createDraft.linkedQuickPurchaseRequestIds = Array.isArray(data.linkedQuickPurchaseRequestIds) ? data.linkedQuickPurchaseRequestIds : this.createDraft.linkedQuickPurchaseRequestIds
+          this.createDraft.items = Array.isArray(data.items) ? data.items : []
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không nạp được dữ liệu tham chiếu từ Quick Purchase')
+        })
+      },
+      createReceipt() {
+        $.ajax({
+          url: '/api/quick-stock-receipts',
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(this.createDraft)
+        }).done(data => {
+          this.closeCreateModal()
+          if (data && data.id) {
+            window.location.href = '/invoices/quick-receipt/' + data.id
+            return
+          }
+          this.refreshAll()
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không thể tạo phiếu nhập hàng nhanh')
+        })
+      },
+      refreshAll() {
+        this.isLoading = true
+        var receiptsRequest = $.get('/api/quick-stock-receipts', data => {
+          this.items = Array.isArray(data) ? data : []
+        })
+        var purchasesRequest = $.get('/api/quick-purchase-requests', data => {
+          this.availablePurchases = (Array.isArray(data) ? data : []).filter(function (item) {
+            return item.status !== 'cancelled'
+          })
+        })
+        $.when(receiptsRequest, purchasesRequest).always(() => {
+          this.isLoading = false
+        })
+      },
+      countByStatus(status) {
+        return this.items.filter(function (item) {
+          return item.status === status
+        }).length
+      },
+      statusTitle(status) {
+        var matched = this.statuses.find(function (item) {
+          return item.key === status
+        })
+        return matched ? matched.title : (status || '-')
+      },
+      statusBadgeClass(status) {
+        var map = {
+          created: 'badge-warning',
+          confirmed: 'badge-success',
+          cancelled: 'badge-dark'
+        }
+        return map[status] || 'badge-secondary'
+      }
+    },
+    watch: {
+      selectedStatuses: {
+        deep: true,
+        handler() {
+          this.currentPage = 1
+          this.persistState()
+        }
+      },
+      searchText() {
+        this.currentPage = 1
+        this.persistState()
+      },
+      pageSize() {
+        this.currentPage = 1
+        this.persistState()
+      },
+      currentPage() {
+        this.persistState()
+      },
+      totalPages() {
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = this.totalPages
+        }
+      }
+    },
+    created() {
+      this.loadPersistedState()
+      this.refreshAll()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>

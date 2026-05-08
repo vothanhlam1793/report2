@@ -1,144 +1,190 @@
-# Session Report — Tiến trình & Việc cần làm tiếp
+# Session Report — Trạng thái sau phiên triển khai dashboard-centric
 
-> File này ghi lại đầy đủ những gì đã làm và chưa làm.
-> Đọc file này đầu tiên khi bắt đầu session mới về dự án report2.
-
----
-
-## Trạng thái hiện tại (sau session này)
-
-- **Repo:** `https://github.com/vothanhlam1793/report2`
-- **Branch:** `master`
-- **Tag mới nhất:** `v1.1.0`
-- **Container production:** `vothanhlam1793/report:38` (chưa rebuild — vẫn đang chạy image cũ)
-- **App local:** chạy được tại `http://localhost:3000` (`node ./bin/www`)
+> File này tóm tắt trạng thái codebase hiện tại trên nhánh `dev`.
+> Dùng file này để tiếp tục session mới mà không cần đọc lại toàn bộ lịch sử chat.
 
 ---
 
-## Những gì đã làm trong session này
+## Trạng thái hiện tại
 
-### ✅ Hoàn thành
-
-1. **Clone repo về local** — `/Users/macos/Documents/Github/report2`
-2. **Node 18 + .env** — không còn hardcode credentials trong source
-3. **Helmet + rate-limit** — bảo mật cơ bản
-4. **Global error handler** — unhandledRejection, uncaughtException
-5. **Fix crash** — `cart.js`, `sms.js` fetch không có try/catch → crash toàn app
-6. **Xoá Monitor/Shortlink** — `creta.link` ngừng hoạt động
-7. **Pull source container REPORT (image :38)** về `/tmp/report-container`
-8. **Merge 2 nhánh song song:**
-   - Container có WS đúng (`svr3.creta.vn`) → lấy `detail.ejs` từ container làm base
-   - Local có camera phone → giữ `barcode.ejs`, `barcodeApp2.js`, route `/barcode/:inv/:prod`
-9. **Dọn dead code:**
-   - Xoá: `routes/upload.js`, `routes/adapter/hubot.js`, `routes/adapter/test.js`
-   - Xoá: `public/js/barcodeApp.js` (v1 cũ), `public/js/detailInvoice.js`, `public/js/upload.js`
-   - Dọn `upload-file` component khỏi `/crm`
-10. **Tạo `docs/`** — architecture.md, deployment.md, changelog.md, plan.md
-11. **Tag v1.0.0** — snapshot trước khi nâng cấp
-12. **Tag v1.1.0** — sau khi merge + dọn dẹp
+- **Repo:** `report2`
+- **Branch làm việc:** `dev`
+- **Runtime local đang dùng:** `http://10.7.0.2:38655`
+- **Entry point chính:** `/invoices/dashboard`
+- **Auth:** đã có login/session, session lưu Mongo, giữ đăng nhập qua restart app trong `7 ngày`
 
 ---
 
-## ⚠️ QUAN TRỌNG — WebSocket Barcode
+## Những gì đã đạt được trong phiên này
 
-### Flow đúng (KHÔNG được đổi)
+### 1. Môi trường và runtime
 
-```
-[Thiết bị scan] → HTTP POST /barcode → [Orion 10.7.0.2:1888 Node-RED]
-                                                |
-                                    WS client → ws://svr3.creta.vn:1888/barcode_in
-                                                |
-                                    [SVR5 Node-RED] /barcode_in → /scan_barcode
-                                                |
-                        [Browser] ← ws://svr3.creta.vn:1888/scan_barcode
-```
+- Dự án đã chạy ổn trên `38655`
+- MongoDB đã cấu hình đúng qua `.env`
+- Odoo credentials đã được nạp vào `.env`
+- Session login đã chuyển sang `connect-mongo`
+- Cookie đăng nhập giữ được sau khi restart app
 
-### URL trong code PHẢI là:
-```js
-var ws = new WebSocket("ws://svr3.creta.vn:1888/scan_barcode")
-```
+### 2. Auth và users
 
-### KHÔNG phải:
-- ~~`ws://node.creta.work:1888/scan_barcode`~~ (server chết)
-- ~~`wss://node.creta.vn/scan_barcode`~~ (node.creta.vn → Orion, không có endpoint này)
+- Có `/login`
+- Có session-based auth
+- Có role cơ bản:
+  - `admin`
+  - `staff`
+  - `viewer`
+- Có page `/users`
+- Có seed admin từ `.env`
 
-### Lý do:
-- `svr3.creta.vn` → SVR5 (160.250.186.124) — Node-RED port 1888, có `/scan_barcode`
-- `node.creta.vn` → SVR12 → Orion 10.7.0.2:1888 — Node-RED Orion, CHỈ có `/barcode` (HTTP POST)
+### 3. App shell và navigation
+
+- Đã có app shell thống nhất
+- Sidebar + topbar dùng chung
+- Các route chính trong khu `invoices` đã ăn cùng layout
+- Sidebar hiện chia theo nhóm:
+  - `Dashboard`
+  - `B1 - B4 Xử Lý Đơn`
+  - `B5 Trở Đi`
+  - `Tra Cứu`
+
+### 4. Dashboard-centric workflow
+
+Dashboard hiện là entry point trung tâm cho vận hành.
+
+Đã làm:
+
+- bỏ đổi trạng thái trực tiếp trên các màn hình chính
+- chuyển tư duy sang `phiếu` / `action nghiệp vụ`
+- dashboard có cột `Bước tiếp theo`
+- dashboard không còn `chu kỳ quan sát`
+- dashboard chỉ tập trung đơn còn mở hoặc đơn mới `30 ngày gần nhất`
+- mặc định ẩn `B9`, `B10`
+- có loading/spinner khi tải dữ liệu chậm
+- có nhãn bước `B1 - Mới lên đơn`
+
+### 5. Luồng B1 -> B4 đã có MVP dùng được
+
+Đã có các page / action sau:
+
+- `/invoices/prepare`
+  - queue phiếu kiểm tra kho
+- `/invoices/warehouse-check?code=...`
+  - phiếu kiểm tra kho cho 1 đơn
+- `/invoices/shortage`
+  - Sale quyết định thiếu hàng
+- `/invoices/quick-purchase`
+  - danh sách phiếu đặt hàng nhanh, tạo mới trực tiếp, detail độc lập
+- `/invoices/quick-receipt`
+  - danh sách phiếu nhập hàng nhanh, tạo mới từ nhiều purchase, detail độc lập
+
+Luồng đang dùng:
+
+1. `B1 - Mới lên đơn`
+2. mở `Phiếu kiểm tra kho`
+3. nếu thiếu hàng:
+   - tạo `Quick Purchase` ngay từ `WHC` hoặc yêu cầu Sale đổi đơn
+   - `Quick Purchase` có thể sinh `Quick Receipt`
+4. quay lại `Phiếu kiểm tra kho` / `invoice reference`
+5. xác nhận đủ hàng để sang `B4`
+
+### 6. Reference code + version hóa đơn
+
+- Đã áp dụng `referenceCode` là trung tâm
+- ví dụ:
+  - `HD020873` là mã tham chiếu
+  - `HD020873.01` là version hóa đơn thực tế
+- Version active là invoice có hậu tố `.nn` lớn nhất
+- `invoice` trong report2 được hiểu là `invoice reference`
+- `WHC` resolve theo `referenceCode`, không còn tách phiếu theo từng version invoice
+- `activeInvoiceCode` được dùng để bám version nguồn hiện hành
+- Khi source invoice đổi version, case giữ workflow status nhưng ghi `invoiceEvent` kiểu `source_invoice_changed`
+
+### 7. invoiceEvents
+
+Đã có collection `invoiceEvents` để log các action chính:
+
+- `warehouse_check_created`
+- `warehouse_check_refreshed`
+- `warehouse_check_confirmed`
+- `warehouse_check_shortage_detected`
+- `sale_decision_purchase_more`
+- `sale_change_requested`
+- `quick_purchase_created`
+- `quick_stock_receipt_created`
+- `source_invoice_changed`
+- `auto_closed_legacy_invoice`
+
+API đọc log:
+
+- `GET /api/invoice-events`
+
+### 8. Chuẩn hóa dữ liệu cũ
+
+Đã thêm script:
+
+- `scripts/normalize-old-invoices.js`
+
+Đã chạy thật:
+
+- cutoff: `2026-04-08`
+- source invoices: `4268`
+- local states: `9602`
+- số state mở cũ được chuyển về `B9`: `2168`
+
+Sau chuẩn hóa:
+
+- `B8: 1098`
+- `B4: 84`
+- `B1: 71`
+- `B5: 3233`
+- `B7: 2947`
+- `B9: 2168`
+- `B3: 1`
 
 ---
 
-## Việc cần làm trong session tiếp theo
+## Những gì còn dang dở
 
-### Phase 2 — Dọn dead code còn lại
+### 1. Dashboard vẫn chưa hoàn toàn “sạch” về dữ liệu vận hành
 
-| # | Task | File | Ghi chú |
-|---|---|---|---|
-| 2.1 | Kiểm tra `detailInvoice2.js` — xoá SMS code bên trong | `public/js/detailInvoice2.js` | Chỉ xoá phần SMS, giữ ModelProDuctBarcodes vì barcode.ejs dùng |
-| 2.2 | Dọn `adapter/sms.js` — xoá hoàn toàn | `routes/adapter/sms.js` | SMS `node.creta.work` chết |
-| 2.3 | Kiểm tra `routes/adapter/sms.js` còn được import ở đâu | — | Trước khi xoá |
-| 2.4 | Dọn code commented-out trong `detail.ejs` | `views/invoices/detail.ejs` | 1211 dòng, nhiều comment dài |
-| 2.5 | Xoá `views/index2.ejs` | `views/index2.ejs` | Không có route nào render nó |
-| 2.6 | Kiểm tra `routes/adapter/dss.js` dùng gì | `routes/adapter/dss.js` | Chưa xem |
+- nguồn 30 ngày gần nhất thực tế chỉ khoảng `202` đơn
+- nhưng Mongo state cũ vẫn còn nhiều record mở ở:
+  - `B5`
+  - `B7`
+  - `B8`
+- cần thêm một vòng report / chuẩn hóa tiếp nếu muốn queue gọn hơn
 
-### Phase 3 — CI/CD Setup
+### 2. Tồn kho Kiot chưa thật sự đáng tin 100%
 
-| # | Task | Ghi chú |
-|---|---|---|
-| 3.1 | Setup GitHub Secrets | DOCKER_USERNAME, DOCKER_PASSWORD, SVR5_HOST, SVR5_PASSWORD |
-| 3.2 | Test pipeline: push master → auto build → auto deploy SVR5 | File `.github/workflows/deploy.yml` đã có sẵn |
-| 3.3 | Build + deploy image mới lên production | Container hiện vẫn chạy image :38 cũ |
+- logic `Phiếu kiểm tra kho` đã có
+- nhưng map tồn Kiot theo mã sản phẩm vẫn cần kiểm tra thêm
 
-### Phase 4 — Authentication
+### 3. invoiceEvents đã có timeline ở `WHC` và `detail`, nhưng chưa đồng đều cho mọi object con
 
-| # | Task | Ghi chú |
-|---|---|---|
-| 4.1 | Thêm `express-session` + login page | App đang public hoàn toàn |
-| 4.2 | Middleware check session toàn bộ routes | |
-| 4.3 | User/pass lưu trong `.env` | Đơn giản, nội bộ |
+- `WHC` và `detail` đã render timeline cơ bản
+- chưa có timeline riêng cho `Quick Purchase` / `Quick Receipt`
 
-### Phase 5 — Dài hạn
+### 4. B5 trở đi vẫn chưa chuyển hoàn toàn sang mô hình phiếu/action
 
-- Dọn Backbone.js → Vue 2 thuần
-- Nâng Express + Mongoose
-- Xem xét KiotViet webhook
+- `Đóng hàng`
+- `Giao chành`
+- `B8 -> B9`
+
+Hiện các page này còn để tái sử dụng tạm, chưa phải workflow cuối cùng.
 
 ---
 
-## Server Map nhanh
+## Việc hợp lý nhất cho session tiếp theo
 
-| Tên | IP | SSH | Ghi chú |
-|---|---|---|---|
-| SVR5 (`svr3.creta.vn`) | 160.250.186.124 | `ssh root@160.250.186.124` | Chạy Docker REPORT + Node-RED |
-| SVR12 (`node.creta.vn`) | 160.250.186.95 | `ssh root@160.250.186.95` | Nginx proxy |
-| Orion | 10.7.0.2 | `sshpass -p '1111' ssh black@10.7.0.2` | Node-RED barcode receiver |
-
-## Container quan trọng trên SVR5
-
-```bash
-docker ps  # xem tất cả
-docker logs REPORT  # xem log app
-docker exec -it REPORT sh  # vào container
-```
-
-## Deploy thủ công (khi CI/CD chưa setup)
-
-```bash
-ssh root@160.250.186.124
-docker stop REPORT && docker rm REPORT
-docker run -d \
-  --name REPORT \
-  --restart unless-stopped \
-  -p 30004:3000 \
-  --env-file /root/.env.report \
-  vothanhlam1793/report:<tag>
-```
+1. Chuẩn hóa tiếp `Quick Receipt` / `Quick Purchase` timeline và liên kết chéo
+2. Làm report/script tiếp cho các đơn cũ đang treo ở `B5`, `B7`, `B8`
+3. Chuẩn hóa sâu hơn logic `B5 -> B9`
+4. Kiểm tra lại nguồn tồn kho Kiot để kết luận đủ/thiếu chính xác hơn
 
 ---
 
-## Credentials (xem agent.md đầy đủ)
+## Ghi chú ngắn
 
-- SVR5 root pass: xem `agent.md`
-- MongoDB: `camerangochoang.com:27040`, user `black`, pass trong `.env`
-- KiotViet: credentials trong `.env`
-- File env trên server: `/root/.env.report`
+- Không ưu tiên refactor toàn bộ route cũ trong lúc này
+- Trọng tâm hiện tại là dashboard và luồng `B1 -> B4`
+- Các page cũ khác giữ lại để tái sử dụng tạm hoặc đóng dần sau

@@ -1,4 +1,4 @@
-module.exports = app => {
+module.exports = (app, requireRole) => {
     var name = "invoice";
     const controllers = require("../controllers/" + name + ".controller.js");
   
@@ -9,6 +9,15 @@ module.exports = app => {
   
     // Retrieve all
     router.get("/", controllers.findAll);
+
+    // Upsert by code
+    router.post("/upsert", controllers.upsertByCode);
+
+    // Aggregate detail by code
+    router.get("/detail/:code", controllers.getDetailByCode);
+
+    // Get By Code
+    router.get("/code/:code", controllers.getByCode);
   
     // Retrieve all published
     router.get("/published", controllers.findAllPublished);
@@ -25,8 +34,10 @@ module.exports = app => {
     // Create a new
     router.delete("/", controllers.deleteAll);
 
-    // Get By Code
-    router.get("/code/:code", controllers.getByCode);
+    if (typeof requireRole === 'function') {
+      app.use('/api/' + name + "s", requireRole('viewer'), router);
+      return;
+    }
 
     app.use('/api/' + name + "s", router);
 };

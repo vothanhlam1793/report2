@@ -1,15 +1,16 @@
-<html>
-  <head>
-    <%- include('../header.ejs') %>
-    <script src="/js/invoice-status.js"></script>
-  </head>
-  <body>
-    <%- include('../menu.ejs') %>
-    <div id="package-workspace" class="container py-3">
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Đóng hàng',
+  pageTitle: 'Đóng hàng',
+  pageSubtitle: 'Theo dõi đơn sẵn sàng đóng và các đơn đã đóng hàng.',
+  currentPath: '/invoices/package',
+  currentUser: currentUser,
+  extraHead: '<script src="/js/invoice-status.js"></script>'
+}) %>
+    <div id="package-workspace">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-          <h1>Đóng hàng</h1>
-          <p class="text-muted mb-0">Nhóm việc cho các bước B4 và B5.</p>
+          <h2 class="h4 mb-1">Đóng hàng</h2>
+          <p class="text-muted mb-0">Quan sát đơn sẵn sàng đóng, số kiện và tiến độ hoàn tất đóng gói.</p>
         </div>
         <a href="/invoices" class="btn btn-outline-secondary">Quay lại danh sách</a>
       </div>
@@ -62,8 +63,7 @@
                 <td>{{ formatMoney(invoice.total) }}</td>
                 <td>
                   <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-info" @click="changeStatus(invoice, 'B4')">B4</button>
-                    <button class="btn btn-outline-primary" @click="changeStatus(invoice, 'B5')">B5</button>
+                    <button class="btn btn-outline-primary" disabled title="Sẽ thay bằng action xác nhận đóng hàng có log">Xác nhận đóng hàng</button>
                     <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + invoice.code">Chi tiết</a>
                   </div>
                 </td>
@@ -149,17 +149,6 @@
             })
             return result || '-'
           },
-          changeStatus(invoice, statusKey) {
-            var payload = { code: invoice.code, status: statusKey }
-            var existing = this.invoiceStates.find(record => record.code === invoice.code)
-            var request
-            if (existing && existing.id) {
-              request = $.ajax({ url: '/api/invoices/' + existing.id, method: 'PUT', data: payload })
-            } else {
-              request = $.ajax({ url: '/api/invoices', method: 'POST', data: payload })
-            }
-            request.done(() => this.refreshAll())
-          }
         },
         created() {
           var params = new URLSearchParams(window.location.search)
@@ -168,5 +157,4 @@
         }
       })
     </script>
-  </body>
-</html>
+<%- include('../partials/invoice-shell-close.ejs') %>

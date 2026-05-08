@@ -1,25 +1,40 @@
 <html>
   <head>
-    <%- include('../header.ejs') %>
+    <%- include('../header.ejs', { title: 'Dashboard' }) %>
     <script src="/js/invoice-status.js"></script>
   </head>
-  <body>
-    <%- include('../menu.ejs') %>
-    <div id="invoice-dashboard" class="container-fluid py-3">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <h1 class="mb-1">Tổng quan hóa đơn</h1>
-          <p class="text-muted mb-0">Quan sát toàn bộ luồng hóa đơn và điều phối sang các workspace làm việc.</p>
-        </div>
-        <div class="btn-group">
-          <a href="/invoices/prepare" class="btn btn-outline-secondary">Chuẩn bị đơn</a>
-          <a href="/invoices/package" class="btn btn-outline-secondary">Đóng hàng</a>
-          <a href="/invoices/ship" class="btn btn-outline-secondary">Giao chành</a>
-          <a href="/invoices" class="btn btn-outline-secondary">Danh sách hóa đơn</a>
-        </div>
+  <body class="app-shell-body">
+    <div class="app-shell">
+      <%- include('../partials/sidebar.ejs', { currentPath: '/invoices/dashboard', currentUser: currentUser }) %>
+      <div class="app-content">
+        <%- include('../partials/topbar.ejs', {
+          currentUser: currentUser,
+          title: 'Dashboard',
+          pageTitle: 'Tổng quan hóa đơn',
+          pageSubtitle: 'Quan sát toàn bộ luồng hóa đơn và điều phối sang các workspace làm việc.'
+        }) %>
+
+        <div id="invoice-dashboard" class="app-page">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <div class="app-step-chip">B1 - Mới lên đơn</div>
+              <h2 class="h4 mb-1">Điểm vào chính</h2>
+              <p class="text-muted mb-0">Nguồn dữ liệu: Odoo cho invoice, MongoDB cho trạng thái nội bộ.</p>
+            </div>
+            <div class="btn-group">
+              <a href="/invoices/prepare" class="btn btn-outline-secondary">Cần duyệt kho</a>
+              <a href="/invoices/package" class="btn btn-outline-secondary">Đóng hàng</a>
+              <a href="/invoices/ship" class="btn btn-outline-secondary">Giao chành</a>
+              <a href="/invoices" class="btn btn-outline-secondary">Danh sách hóa đơn</a>
+            </div>
+          </div>
+
+      <div class="app-loading app-loading-card" v-if="isLoading">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div>Đang tải dữ liệu dashboard, vui lòng chờ...</div>
       </div>
 
-      <div class="row mb-4">
+      <div class="row mb-4" v-if="!isLoading">
         <div class="col-lg-3 col-md-4 col-sm-6" v-for="status in statuses" :key="status.key">
           <div class="card mb-3 border-0 shadow-sm">
             <div class="card-body">
@@ -37,7 +52,7 @@
         </div>
       </div>
 
-      <div class="row mb-4">
+      <div class="row mb-4" v-if="!isLoading">
         <div class="col-lg-3 col-md-6" v-for="workspace in workspaces" :key="workspace.key">
           <div class="card h-100 shadow-sm">
             <div class="card-body d-flex flex-column">
@@ -56,7 +71,7 @@
       </div>
 
       <div class="row mb-4">
-        <div class="col-lg-4">
+        <div class="col-lg-4" v-if="!isLoading">
           <div class="card shadow-sm h-100">
             <div class="card-body">
               <h5 class="card-title">Cảnh báo vận hành</h5>
@@ -77,32 +92,16 @@
             </div>
           </div>
         </div>
-        <div class="col-lg-8">
+        <div class="col-lg-8" v-if="!isLoading">
           <div class="card shadow-sm h-100">
             <div class="card-body">
               <div class="alert alert-light border mb-3">
-                <div class="font-weight-bold mb-2">Chu kỳ quan sát</div>
-                <div class="form-row align-items-end">
-                  <div class="col-md-3">
-                    <label>Từ ngày</label>
-                    <input type="date" class="form-control" v-model="fromDate">
-                  </div>
-                  <div class="col-md-3">
-                    <label>Đến ngày</label>
-                    <input type="date" class="form-control" v-model="toDate">
-                  </div>
-                  <div class="col-md-2">
-                    <button class="btn btn-outline-secondary btn-block" @click="setTodayCycle()">Hôm nay</button>
-                  </div>
-                  <div class="col-md-2">
-                    <button class="btn btn-outline-secondary btn-block" @click="setWeekCycle()">7 ngày</button>
-                  </div>
-                  <div class="col-md-2">
-                    <button class="btn btn-outline-secondary btn-block" @click="clearCycle()">Toàn bộ</button>
-                  </div>
-                </div>
-                <small class="text-muted d-block mt-2">
-                  Dashboard sẽ chỉ tính các hóa đơn có ngày đơn nằm trong chu kỳ này.
+                <div class="font-weight-bold mb-2">Phạm vi dashboard</div>
+                <small class="text-muted d-block">
+                  Dashboard chỉ tập trung đơn còn mở hoặc đơn chưa có trạng thái nhưng phát sinh trong 30 ngày gần nhất.
+                </small>
+                <small class="text-muted d-block mt-1">
+                  Đơn ở B9, B10 sẽ được ẩn khỏi queue chính để không làm loãng vận hành hiện tại.
                 </small>
               </div>
 
@@ -115,7 +114,7 @@
                   </select>
                 </div>
                 <div class="col-md-3">
-                  <label>Nhóm việc</label>
+                  <label>Loại xử lý</label>
                   <select class="form-control" v-model="selectedWorkspaceKey">
                     <option value="">Tất cả</option>
                     <option v-for="workspace in workspaces" :value="workspace.key">{{ workspace.title }}</option>
@@ -136,8 +135,10 @@
                     <th>Mã HĐ</th>
                     <th>Khách</th>
                     <th>Trạng thái</th>
+                    <th>Cảnh báo</th>
                     <th>Ngày đơn</th>
                     <th>Tổng tiền</th>
+                    <th>Bước tiếp theo</th>
                     <th>Điều hướng</th>
                   </tr>
                 </thead>
@@ -148,17 +149,22 @@
                     <td>
                       <span class="badge" :class="badgeClass(invoice.status)">{{ statusTitle(invoice.status) }}</span>
                     </td>
+                    <td>
+                      <span class="badge badge-warning" v-if="invoice.changeWarningSummary">Đã đổi version</span>
+                      <span class="text-muted" v-else>-</span>
+                    </td>
                     <td>{{ formatDate(invoice.purchaseDate) }}</td>
                     <td>{{ formatMoney(invoice.total) }}</td>
+                    <td>{{ invoice.nextAction }}</td>
                     <td>
                       <div class="btn-group btn-group-sm">
+                        <a class="btn btn-outline-dark" :href="nextActionHref(invoice)">{{ nextActionButton(invoice) }}</a>
                         <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + invoice.code">Chi tiết</a>
-                        <a class="btn btn-outline-secondary" :href="workspaceHref(invoice.status, invoice.code)">Đi làm việc</a>
                       </div>
                     </td>
                   </tr>
                   <tr v-if="filteredInvoices.length === 0">
-                    <td colspan="6" class="text-center text-muted">Không có đơn phù hợp.</td>
+                    <td colspan="8" class="text-center text-muted">Không có đơn phù hợp.</td>
                   </tr>
                 </tbody>
               </table>
@@ -166,7 +172,10 @@
           </div>
         </div>
       </div>
+        </div>
+      </div>
     </div>
+      </div>
 
     <script>
       function getWorkspaceByStatus(statusKey) {
@@ -187,41 +196,56 @@
         data: {
           invoices: [],
           invoiceStates: [],
+          isLoading: false,
           selectedStatusKey: '',
           selectedWorkspaceKey: '',
           searchText: '',
-          fromDate: '',
-          toDate: '',
           statuses: window.INVOICE_STATUSES,
           workspaces: [
             {
               key: 'prepare',
-              title: 'Chuẩn bị đơn',
-              description: 'Kiểm tra tồn kho, chờ đủ hàng và xác nhận sẵn sàng đóng.',
-              statusKeys: ['B2', 'B3', 'B4'],
-              href: '/invoices/prepare'
+               title: 'Cần duyệt kho',
+               description: 'Theo dõi các phiếu kiểm tra kho draft, checking và completed.',
+               statusKeys: ['B1', 'B2'],
+               href: '/invoices/prepare'
             },
             {
               key: 'package',
               title: 'Đóng hàng',
-              description: 'Theo dõi đơn sẵn sàng đóng và các đơn đã đóng hàng.',
+              description: 'Đơn sẵn sàng đóng hàng và đơn đã đóng xong.',
               statusKeys: ['B4', 'B5'],
               href: '/invoices/package'
             },
             {
               key: 'ship',
               title: 'Giao chành',
-              description: 'Điều phối đơn đang giao ra chành và đã tới chành.',
+              description: 'Đơn đang giao ra chành và đơn đã tới chành.',
               statusKeys: ['B6', 'B7'],
               href: '/invoices/ship'
             },
-            {
-              key: 'finish',
-              title: 'Hoàn tất',
-              description: 'Theo dõi khách đã nhận và các đơn đã hoàn thành.',
-              statusKeys: ['B8', 'B9'],
-              href: '/invoices'
-            }
+            ...( ('<%= currentUser.role %>' === 'admin') ? [
+              {
+                key: 'shortage',
+                title: 'Thiếu hàng',
+                description: 'Sale chọn đổi đơn hoặc đặt hàng thêm cho các đơn thiếu hàng.',
+                statusKeys: ['B3'],
+                href: '/invoices/shortage'
+              },
+              {
+                key: 'quick-purchase',
+                title: 'Phiếu đặt hàng nhanh',
+                description: 'Theo dõi các phiếu đặt hàng nhanh đang mở cho đơn thiếu hàng.',
+                statusKeys: ['B3'],
+                href: '/invoices/quick-purchase'
+              },
+              {
+                key: 'quick-receipt',
+                title: 'Phiếu nhập hàng nhanh',
+                description: 'Theo dõi phiếu nhập nhanh dùng để bù tồn và quay lại xác nhận đủ hàng.',
+                statusKeys: ['B3'],
+                href: '/invoices/quick-receipt'
+              }
+            ] : [])
           ]
         },
         computed: {
@@ -232,29 +256,39 @@
             })
             return this.invoices.map(function(invoice) {
               var local = stateMap[invoice.code] || {}
+              var normalizedStatus = local.status || 'B1'
+               var nextAction = 'Mở phiếu kho'
+               if (normalizedStatus === 'B2') {
+                 nextAction = 'Xử lý sau duyệt kho'
+               } else if (normalizedStatus === 'B3') {
+                 nextAction = 'Sale xử lý thiếu hàng'
+               } else if (normalizedStatus === 'B4') {
+                 nextAction = 'Chờ đóng hàng'
+              }
               return Object.assign({}, invoice, {
-                status: local.status || 'B1',
-                statusInfo: local.statusInfo || window.getInvoiceStatusMeta(local.status || 'B1')
+                status: normalizedStatus,
+                statusInfo: local.statusInfo || window.getInvoiceStatusMeta(normalizedStatus),
+                changeWarningSummary: local.changeWarningSummary || '',
+                nextAction: nextAction
               })
             })
           },
-          cycleInvoices() {
+          operationInvoices() {
             return this.mergedInvoices.filter(invoice => {
+              var statusKey = window.normalizeInvoiceStatus(invoice.status)
+              if (['B9', 'B10'].includes(statusKey)) {
+                return false
+              }
+
               if (!invoice.purchaseDate) {
-                return !this.fromDate && !this.toDate
-              }
-              var purchaseDay = moment(invoice.purchaseDate).format('YYYY-MM-DD')
-              if (this.fromDate && purchaseDay < this.fromDate) {
                 return false
               }
-              if (this.toDate && purchaseDay > this.toDate) {
-                return false
-              }
-              return true
+
+              return moment().diff(moment(invoice.purchaseDate), 'days') <= 30
             })
           },
           delayedB3() {
-            return this.cycleInvoices.filter(invoice => {
+            return this.operationInvoices.filter(invoice => {
               if (window.normalizeInvoiceStatus(invoice.status) !== 'B3' || !invoice.purchaseDate) {
                 return false
               }
@@ -263,7 +297,7 @@
           },
           filteredInvoices() {
             var search = this.searchText.trim().toLowerCase()
-            return this.cycleInvoices.filter(invoice => {
+            return this.operationInvoices.filter(invoice => {
               var statusKey = window.normalizeInvoiceStatus(invoice.status)
               var matchesStatus = !this.selectedStatusKey || statusKey === this.selectedStatusKey
               var workspace = this.workspaces.find(item => item.key === this.selectedWorkspaceKey)
@@ -276,18 +310,22 @@
         },
         methods: {
           refreshAll() {
-            $.get('/api/kiot/invoices', data => {
+            this.isLoading = true
+            var invoiceRequest = $.get('/api/kiot/invoices', data => {
               this.invoices = data || []
             })
-            $.get('/api/invoices', data => {
+            var stateRequest = $.get('/api/invoices', data => {
               this.invoiceStates = data || []
+            })
+            $.when(invoiceRequest, stateRequest).always(() => {
+              this.isLoading = false
             })
           },
           countByStatus(statusKey) {
-            return this.cycleInvoices.filter(invoice => window.normalizeInvoiceStatus(invoice.status) === statusKey).length
+            return this.operationInvoices.filter(invoice => window.normalizeInvoiceStatus(invoice.status) === statusKey).length
           },
           countForWorkspace(statusKeys) {
-            return this.cycleInvoices.filter(invoice => statusKeys.includes(window.normalizeInvoiceStatus(invoice.status))).length
+            return this.operationInvoices.filter(invoice => statusKeys.includes(window.normalizeInvoiceStatus(invoice.status))).length
           },
           badgeClass(status) {
             return 'badge-' + window.getInvoiceStatusMeta(status).style
@@ -308,22 +346,28 @@
             }
             return '/invoices/' + workspace + '?code=' + code
           },
-          setTodayCycle() {
-            var today = moment().format('YYYY-MM-DD')
-            this.fromDate = today
-            this.toDate = today
+          nextActionHref(invoice) {
+            var status = window.normalizeInvoiceStatus(invoice.status)
+            if (status === 'B3') {
+              return '/invoices/shortage'
+            }
+             if (['B1', 'B2', 'B4'].includes(status)) {
+               return '/invoices/warehouse-check?code=' + invoice.code
+             }
+            return this.workspaceHref(status, invoice.code)
           },
-          setWeekCycle() {
-            this.fromDate = moment().subtract(6, 'days').format('YYYY-MM-DD')
-            this.toDate = moment().format('YYYY-MM-DD')
+          nextActionButton(invoice) {
+            var status = window.normalizeInvoiceStatus(invoice.status)
+            if (status === 'B3') {
+              return 'Thiếu hàng'
+            }
+             if (['B1', 'B2', 'B4'].includes(status)) {
+               return 'Phiếu kho'
+             }
+            return 'Đi làm việc'
           },
-          clearCycle() {
-            this.fromDate = ''
-            this.toDate = ''
-          }
         },
         created() {
-          this.setTodayCycle()
           this.refreshAll()
         }
       })

@@ -1,0 +1,173 @@
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Thiếu hàng',
+  pageTitle: 'Thiếu hàng',
+  pageSubtitle: 'Danh sách đơn kho đã kết luận thiếu và đang chờ Sale quyết định hướng xử lý.',
+  currentPath: '/invoices/shortage',
+  currentUser: currentUser
+}) %>
+<div id="shortage-workspace">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải danh sách thiếu hàng...</div>
+  </div>
+
+  <template v-if="!isLoading">
+  <div class="app-step-chip">B3 - Chờ đủ hàng | Sale chọn đổi đơn hoặc đặt hàng thêm</div>
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="form-row align-items-end">
+        <div class="col-md-4">
+          <label>Tìm mã đơn / khách</label>
+          <input class="form-control" v-model="searchText" placeholder="VD: DH123456 hoặc Anh Duy">
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-outline-primary btn-block" @click="refreshAll()">Làm mới</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <table class="table table-bordered table-hover">
+        <thead>
+          <tr>
+            <th>Mã tham chiếu</th>
+            <th>Mã đơn hiện tại</th>
+            <th>Trạng thái quyết định</th>
+            <th>Cảnh báo</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in filteredChecks" :key="item.id">
+            <td>{{ item.referenceCode }}</td>
+            <td>{{ item.invoiceCode }}</td>
+            <td>{{ decisionTitle(item.decisionStatus) }}</td>
+            <td>{{ item.summary || 'Chờ Sale chọn đổi đơn hoặc đặt hàng' }}</td>
+            <td>
+              <div class="btn-group btn-group-sm">
+                <a class="btn btn-outline-secondary" :href="'/invoices/warehouse-check?code=' + item.invoiceCode">Xem phiếu</a>
+                <button class="btn btn-outline-warning" @click="choosePurchase(item)">Đặt hàng</button>
+                <button class="btn btn-outline-danger" @click="chooseChangeOrder(item)">Đổi đơn</button>
+                <button class="btn btn-outline-success" @click="createQuickPurchase(item)">Tạo phiếu đặt hàng</button>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="filteredChecks.length === 0">
+            <td colspan="5" class="text-center text-muted">Không có đơn thiếu hàng chờ Sale xử lý.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal" id="shortageDecisionModal" tabindex="-1" role="dialog" style="display:block" v-if="selectedCheck">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Quyết định thiếu hàng - {{ selectedCheck.invoiceCode }}</h5>
+          <button type="button" class="close" @click="selectedCheck = null"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Hướng xử lý</label>
+            <input class="form-control" :value="decisionMode === 'purchase_more' ? 'Đặt hàng' : 'Đổi đơn'" disabled>
+          </div>
+          <div class="form-group">
+            <label>Ghi chú</label>
+            <textarea class="form-control" v-model="decisionSummary"></textarea>
+          </div>
+          <div class="alert alert-light border" v-if="decisionMode === 'purchase_more'">
+            Sau khi chọn đặt hàng, đơn sẽ tiếp tục ở B3 và chờ lập phiếu đặt hàng nhanh / nhập hàng nhanh liên quan đến mã DH hiện tại.
+          </div>
+          <div class="form-group" v-if="decisionMode === 'change_order'">
+            <label>Mã đơn mới</label>
+            <input class="form-control" v-model="replacementInvoiceCode" placeholder="VD: DH123456.01">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" @click="selectedCheck = null">Đóng</button>
+          <button type="button" class="btn btn-primary" @click="submitDecision()">Lưu quyết định</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  </template>
+</div>
+
+<script>
+  new Vue({
+    el: '#shortage-workspace',
+    data: {
+      shortageChecks: [],
+      isLoading: false,
+      searchText: '',
+      selectedCheck: null,
+      decisionMode: '',
+      decisionSummary: '',
+      replacementInvoiceCode: ''
+    },
+    computed: {
+      filteredChecks() {
+        var search = this.searchText.trim().toLowerCase()
+        return this.shortageChecks.filter(item => {
+          var haystack = [item.referenceCode, item.invoiceCode, item.summary].join(' ').toLowerCase()
+          return !search || haystack.includes(search)
+        })
+      }
+    },
+    methods: {
+      refreshAll() {
+        this.isLoading = true
+        $.get('/api/warehouse-checks/shortage-queue', data => {
+          this.shortageChecks = data || []
+        }).always(() => {
+          this.isLoading = false
+        })
+      },
+      decisionTitle(status) {
+        if (status === 'purchase_selected') return 'Đã chọn đặt hàng'
+        if (status === 'change_order_selected') return 'Đã chọn đổi đơn'
+        return 'Chờ Sale quyết định'
+      },
+      choosePurchase(item) {
+        this.selectedCheck = item
+        this.decisionMode = 'purchase_more'
+        this.decisionSummary = item.summary || ''
+        this.replacementInvoiceCode = ''
+      },
+      chooseChangeOrder(item) {
+        this.selectedCheck = item
+        this.decisionMode = 'change_order'
+        this.decisionSummary = item.summary || ''
+        this.replacementInvoiceCode = ''
+      },
+      createQuickPurchase(item) {
+        $.post('/api/warehouse-checks/invoice/' + item.invoiceCode + '/quick-purchase', {
+          summary: 'Tạo từ trang Thiếu hàng'
+        }).done(() => {
+          this.refreshAll()
+        })
+      },
+      submitDecision() {
+        if (!this.selectedCheck) return
+        $.post('/api/warehouse-checks/invoice/' + this.selectedCheck.invoiceCode + '/shortage-decision', {
+          saleDecision: this.decisionMode,
+          summary: this.decisionSummary,
+          replacementInvoiceCode: this.replacementInvoiceCode
+        }).done(() => {
+          this.selectedCheck = null
+          this.decisionMode = ''
+          this.decisionSummary = ''
+          this.replacementInvoiceCode = ''
+          this.refreshAll()
+        })
+      }
+    },
+    created() {
+      this.refreshAll()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>

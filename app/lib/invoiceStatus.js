@@ -1,13 +1,14 @@
 const INVOICE_STATUSES = [
   { key: 'B1', order: 1, title: 'Moi len don', style: 'danger' },
-  { key: 'B2', order: 2, title: 'Kiem tra ton kho', style: 'secondary' },
+  { key: 'B2', order: 2, title: 'Kiem tra ton kho xong', style: 'secondary' },
   { key: 'B3', order: 3, title: 'Cho du hang', style: 'warning' },
   { key: 'B4', order: 4, title: 'San sang dong hang', style: 'info' },
   { key: 'B5', order: 5, title: 'Da dong hang', style: 'primary' },
   { key: 'B6', order: 6, title: 'Dang giao ra chanh', style: 'primary' },
   { key: 'B7', order: 7, title: 'Da toi chanh', style: 'info' },
   { key: 'B8', order: 8, title: 'Khach da nhan', style: 'success' },
-  { key: 'B9', order: 9, title: 'Hoan thanh', style: 'success' }
+  { key: 'B9', order: 9, title: 'Hoan thanh', style: 'success' },
+  { key: 'B10', order: 10, title: 'Huy', style: 'dark' }
 ]
 
 const LEGACY_TO_KEY = {

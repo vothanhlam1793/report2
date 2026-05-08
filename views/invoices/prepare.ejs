@@ -1,26 +1,30 @@
-<html>
-  <head>
-    <%- include('../header.ejs') %>
-    <script src="/js/invoice-status.js"></script>
-  </head>
-  <body>
-    <%- include('../menu.ejs') %>
-    <div id="prepare-workspace" class="container py-3">
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Cần duyệt kho',
+  pageTitle: 'Cần duyệt kho',
+  pageSubtitle: 'Danh sách tất cả phiếu kiểm tra kho, mặc định tập trung vào các phiếu chưa hoàn tất.',
+  currentPath: '/invoices/prepare',
+  currentUser: currentUser,
+  extraHead: '<script src="/js/invoice-status.js"></script>'
+}) %>
+    <div id="prepare-workspace">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-          <h1>Chuẩn bị đơn</h1>
-          <p class="text-muted mb-0">Nhóm việc cho các bước B2, B3, B4.</p>
+          <h2 class="h4 mb-1">Cần duyệt kho</h2>
+          <p class="text-muted mb-0">Queue theo phiếu kiểm tra kho độc lập, không còn chỉ dựa trên trạng thái invoice.</p>
         </div>
-        <a href="/invoices" class="btn btn-outline-secondary">Quay lại danh sách</a>
+        <div class="btn-group">
+          <a href="/invoices/dashboard" class="btn btn-outline-secondary">Dashboard</a>
+          <button class="btn btn-outline-primary" @click="refreshAll()">Làm mới</button>
+        </div>
       </div>
 
       <div class="row mb-3">
-        <div class="col-md-4" v-for="status in prepareStatuses" :key="status.key">
+        <div class="col-md-4" v-for="status in whcStatuses" :key="status.key">
           <div class="card mb-3">
             <div class="card-body">
               <div class="small text-muted">{{ status.key }}</div>
               <h5 class="card-title mb-1">{{ status.title }}</h5>
-              <div class="display-4">{{ countByStatus(status.key) }}</div>
+              <div class="display-4">{{ countByWhcStatus(status.key) }}</div>
             </div>
           </div>
         </div>
@@ -30,18 +34,32 @@
         <div class="card-body">
           <div class="form-row align-items-end">
             <div class="col-md-3">
-              <label>Trạng thái</label>
-              <select class="form-control" v-model="selectedStatusKey">
+              <label>Trạng thái phiếu</label>
+              <select class="form-control" v-model="selectedWhcStatus">
+                <option value="focus">Đang xử lý</option>
+                <option value="all">Tất cả</option>
+                <option v-for="status in whcStatuses" :value="status.key">{{ status.title }}</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label>Kết luận kho</label>
+              <select class="form-control" v-model="selectedConclusion">
                 <option value="">Tất cả</option>
-                <option v-for="status in prepareStatuses" :value="status.key">{{ status.key }} - {{ status.title }}</option>
+                <option value="enough">Đủ hàng</option>
+                <option value="shortage">Thiếu hàng</option>
+                <option value="pending">Chưa kết luận</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label>Trạng thái HĐ</label>
+              <select class="form-control" v-model="selectedInvoiceStatus">
+                <option value="">Tất cả</option>
+                <option v-for="status in invoiceStatuses" :value="status.key">{{ status.key }} - {{ status.title }}</option>
               </select>
             </div>
             <div class="col-md-4">
-              <label>Tìm theo mã / khách</label>
-              <input class="form-control" v-model="searchText" placeholder="VD: HD020865 hoặc KH000749">
-            </div>
-            <div class="col-md-2">
-              <button class="btn btn-outline-primary btn-block" @click="refreshAll()">Làm mới</button>
+              <label>Tìm phiếu / mã đơn / khách</label>
+              <input class="form-control" v-model="searchText" placeholder="VD: HD020865 hoặc Anh Duy">
             </div>
           </div>
         </div>
@@ -53,35 +71,43 @@
             <thead>
               <tr>
                 <th>Mã HĐ</th>
+                <th>Mã tham chiếu</th>
                 <th>Khách</th>
-                <th>Trạng thái</th>
+                <th>Trạng thái WHC</th>
+                <th>Kết luận kho</th>
+                <th>Trạng thái HĐ</th>
                 <th>Ngày đơn</th>
-                <th>Tổng tiền</th>
+                <th>Người tạo</th>
+                <th>Cập nhật</th>
                 <th>Thao tác</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="invoice in filteredInvoices" :key="invoice.code">
-                <td><a :href="'/invoices/detail?code=' + invoice.code">{{ invoice.code }}</a></td>
-                <td>{{ invoice.customerName || invoice.customerCode || '-' }}</td>
+              <tr v-for="item in filteredChecks" :key="item.id">
+                <td><a :href="'/invoices/detail?code=' + item.invoiceCode">{{ item.invoiceCode }}</a></td>
+                <td>{{ item.referenceCode || '-' }}</td>
+                <td>{{ item.invoiceSnapshot.customerName || item.invoiceSnapshot.customerCode || '-' }}</td>
                 <td>
-                  <span class="badge" :class="badgeClass(invoice.status)">
-                    {{ statusTitle(invoice.status) }}
-                  </span>
+                  <span class="badge" :class="whcBadgeClass(item.status)">{{ whcStatusTitle(item.status) }}</span>
                 </td>
-                <td>{{ formatDate(invoice.purchaseDate) }}</td>
-                <td>{{ formatMoney(invoice.total) }}</td>
+                <td>
+                  <span class="badge" :class="conclusionBadgeClass(item.stockConclusion)">{{ conclusionTitle(item.stockConclusion) }}</span>
+                </td>
+                <td>
+                  <span class="badge" :class="invoiceBadgeClass(item.invoiceStatus)">{{ invoiceStatusTitle(item.invoiceStatus) }}</span>
+                </td>
+                <td>{{ formatDate(item.invoiceSnapshot.purchaseDate) }}</td>
+                <td>{{ item.createdByName || item.createdByUsername || '-' }}</td>
+                <td>{{ formatDate(item.updatedAt) }}</td>
                 <td>
                   <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary" @click="changeStatus(invoice, 'B2')">B2</button>
-                    <button class="btn btn-outline-warning" @click="changeStatus(invoice, 'B3')">B3</button>
-                    <button class="btn btn-outline-info" @click="changeStatus(invoice, 'B4')">B4</button>
-                    <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + invoice.code">Chi tiết</a>
+                    <a class="btn btn-outline-dark" :href="'/invoices/warehouse-check?code=' + item.invoiceCode">Mở phiếu</a>
+                    <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + item.invoiceCode">Chi tiết</a>
                   </div>
                 </td>
               </tr>
-              <tr v-if="filteredInvoices.length === 0">
-                <td colspan="6" class="text-center text-muted">Không có đơn phù hợp.</td>
+              <tr v-if="filteredChecks.length === 0">
+                <td colspan="10" class="text-center text-muted">Không có phiếu phù hợp.</td>
               </tr>
             </tbody>
           </table>
@@ -90,101 +116,128 @@
     </div>
 
     <script>
-      var PrepareInvoice = Backbone.Model.extend({
-        urlRoot: '/api/invoices'
-      })
-
-      function normalizeStatusRecord(status) {
-        return window.getInvoiceStatusMeta(status)
-      }
-
       new Vue({
         el: '#prepare-workspace',
         data: {
-          invoices: [],
+          warehouseChecks: [],
           invoiceStates: [],
-          selectedStatusKey: '',
-          searchText: ''
+          searchText: '',
+          selectedWhcStatus: 'focus',
+          selectedConclusion: '',
+          selectedInvoiceStatus: '',
+          whcStatuses: [
+            { key: 'draft', title: 'Draft' },
+            { key: 'checking', title: 'Đang kiểm tra' },
+            { key: 'completed', title: 'Đã hoàn tất' }
+          ],
+          invoiceStatuses: window.INVOICE_STATUSES
         },
         computed: {
-          prepareStatuses() {
-            return window.INVOICE_STATUSES.filter(status => ['B2', 'B3', 'B4'].includes(status.key))
-          },
-          mergedInvoices() {
+          mergedChecks() {
             var stateMap = {}
             this.invoiceStates.forEach(function(record) {
               stateMap[record.code] = record
             })
-            return this.invoices.map(function(invoice) {
-              var local = stateMap[invoice.code] || {}
-              return Object.assign({}, invoice, {
-                status: local.status || 'B1',
-                statusInfo: local.statusInfo || window.getInvoiceStatusMeta(local.status || 'B1')
+            return this.warehouseChecks.map(function(item) {
+              var local = stateMap[item.invoiceCode] || {}
+              return Object.assign({}, item, {
+                invoiceSnapshot: item.invoiceSnapshot || {},
+                invoiceStatus: local.status || 'B1'
               })
             })
           },
-          filteredInvoices() {
+          filteredChecks() {
             var search = this.searchText.trim().toLowerCase()
-            return this.mergedInvoices.filter(invoice => {
-              var inPrepare = ['B2', 'B3', 'B4'].includes(window.normalizeInvoiceStatus(invoice.status))
-              if (!inPrepare) {
-                return false
-              }
-              var matchesStatus = !this.selectedStatusKey || window.normalizeInvoiceStatus(invoice.status) === this.selectedStatusKey
-              var haystack = [invoice.code, invoice.customerCode, invoice.customerName].join(' ').toLowerCase()
+            return this.mergedChecks.filter(item => {
+              var matchesWhcStatus = this.selectedWhcStatus === 'all'
+                ? true
+                : this.selectedWhcStatus === 'focus'
+                  ? ['draft', 'checking'].includes(item.status)
+                  : item.status === this.selectedWhcStatus
+              var matchesConclusion = !this.selectedConclusion
+                || (this.selectedConclusion === 'pending'
+                  ? !item.stockConclusion
+                  : item.stockConclusion === this.selectedConclusion)
+              var normalizedInvoiceStatus = window.normalizeInvoiceStatus(item.invoiceStatus)
+              var matchesInvoiceStatus = !this.selectedInvoiceStatus || normalizedInvoiceStatus === this.selectedInvoiceStatus
+              var haystack = [
+                item.invoiceCode,
+                item.referenceCode,
+                item.invoiceSnapshot.customerCode,
+                item.invoiceSnapshot.customerName,
+                item.createdByName,
+                item.createdByUsername
+              ].join(' ').toLowerCase()
               var matchesSearch = !search || haystack.includes(search)
-              return matchesStatus && matchesSearch
+              return matchesWhcStatus && matchesConclusion && matchesInvoiceStatus && matchesSearch
+            }).sort(function(a, b) {
+              var focusOrder = { draft: 0, checking: 1, completed: 2 }
+              var statusDiff = (focusOrder[a.status] || 99) - (focusOrder[b.status] || 99)
+              if (statusDiff !== 0) {
+                return statusDiff
+              }
+              return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()
             })
           }
         },
         methods: {
           refreshAll() {
-            this.loadInvoices()
-            this.loadInvoiceStates()
-          },
-          loadInvoices() {
-            $.get('/api/kiot/invoices', data => {
-              this.invoices = data || []
+            var checksRequest = $.get('/api/warehouse-checks?ensureDrafts=1', data => {
+              this.warehouseChecks = data || []
             })
-          },
-          loadInvoiceStates() {
-            $.get('/api/invoices', data => {
+            var statesRequest = $.get('/api/invoices', data => {
               this.invoiceStates = data || []
             })
+            $.when(checksRequest, statesRequest)
           },
-          countByStatus(statusKey) {
-            return this.mergedInvoices.filter(invoice => window.normalizeInvoiceStatus(invoice.status) === statusKey).length
+          countByWhcStatus(statusKey) {
+            return this.mergedChecks.filter(function(item) {
+              return item.status === statusKey
+            }).length
           },
-          statusTitle(status) {
-            return normalizeStatusRecord(status).title
+          whcStatusTitle(status) {
+            var map = {
+              draft: 'Draft',
+              checking: 'Đang kiểm tra',
+              completed: 'Đã hoàn tất'
+            }
+            return map[status] || status || '-'
           },
-          badgeClass(status) {
-            return 'badge-' + normalizeStatusRecord(status).style
+          whcBadgeClass(status) {
+            var map = {
+              draft: 'badge-secondary',
+              checking: 'badge-warning',
+              completed: 'badge-success'
+            }
+            return map[status] || 'badge-light'
+          },
+          conclusionTitle(value) {
+            var map = {
+              enough: 'Đủ hàng',
+              shortage: 'Thiếu hàng'
+            }
+            return map[value] || 'Chưa kết luận'
+          },
+          conclusionBadgeClass(value) {
+            var map = {
+              enough: 'badge-success',
+              shortage: 'badge-danger'
+            }
+            return map[value] || 'badge-light'
+          },
+          invoiceStatusTitle(status) {
+            return window.getInvoiceStatusMeta(status).title
+          },
+          invoiceBadgeClass(status) {
+            return 'badge-' + window.getInvoiceStatusMeta(status).style
           },
           formatDate(value) {
             return value ? moment(value).format('DD/MM/YYYY HH:mm') : '-'
-          },
-          formatMoney(value) {
-            return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
-          },
-          changeStatus(invoice, statusKey) {
-            var payload = { code: invoice.code, status: statusKey }
-            var existing = this.invoiceStates.find(record => record.code === invoice.code)
-            var request
-            if (existing && existing.id) {
-              request = $.ajax({ url: '/api/invoices/' + existing.id, method: 'PUT', data: payload })
-            } else {
-              request = $.ajax({ url: '/api/invoices', method: 'POST', data: payload })
-            }
-            request.done(() => this.loadInvoiceStates())
           }
         },
         created() {
-          var params = new URLSearchParams(window.location.search)
-          this.searchText = params.get('code') || ''
           this.refreshAll()
         }
       })
     </script>
-  </body>
-</html>
+<%- include('../partials/invoice-shell-close.ejs') %>

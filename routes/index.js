@@ -4,10 +4,11 @@ var kiot = require("./adapter/kiot");
 var sheet = require("./adapter/sheet");
 /* GET home page. */
 router.get('/', async function(req, res, next) {
-  res.render('index', { 
-    title: 'Báo cáo',
-    sales: {}
-  });
+  if (req.session && req.session.user) {
+    return res.redirect('/invoices/dashboard')
+  }
+
+  return res.redirect('/login')
 });
 
 router.get("/component", async function(req, res){

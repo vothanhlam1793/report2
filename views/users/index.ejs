@@ -1,0 +1,113 @@
+<html>
+  <head>
+    <%- include('../header.ejs', { title: title }) %>
+  </head>
+  <body class="app-shell-body">
+    <div class="app-shell">
+      <%- include('../partials/sidebar.ejs', { currentPath: '/users', currentUser: currentUser }) %>
+      <div class="app-content">
+        <%- include('../partials/topbar.ejs', {
+          currentUser: currentUser,
+          title: title,
+          pageTitle: 'Users',
+          pageSubtitle: 'Quản lý tài khoản nội bộ và role truy cập hệ thống.'
+        }) %>
+
+        <div class="app-page">
+          <div class="row">
+            <div class="col-lg-4 mb-4">
+              <div class="card shadow-sm">
+                <div class="card-body">
+                  <h5 class="card-title">Tạo user mới</h5>
+                  <form method="post" action="/users">
+                    <div class="form-group">
+                      <label>Họ tên</label>
+                      <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                      <label>Username</label>
+                      <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                      <label>Mật khẩu tạm</label>
+                      <input type="password" name="password" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                      <label>Role</label>
+                      <select class="form-control" name="role">
+                        <option value="viewer">viewer</option>
+                        <option value="staff">staff</option>
+                        <option value="admin">admin</option>
+                      </select>
+                    </div>
+                    <div class="form-check mb-3">
+                      <input class="form-check-input" type="checkbox" name="isActive" id="isActive" checked>
+                      <label class="form-check-label" for="isActive">Đang hoạt động</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Tạo user</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-8">
+              <div class="card shadow-sm">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">Danh sách người dùng</h5>
+                    <span class="badge badge-light"><%= users.length %> users</span>
+                  </div>
+
+                  <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                      <thead>
+                        <tr>
+                          <th>Họ tên</th>
+                          <th>Username</th>
+                          <th>Role</th>
+                          <th>Trạng thái</th>
+                          <th>Lần đăng nhập cuối</th>
+                          <th>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% users.forEach(function(user) { %>
+                          <tr>
+                            <td><%= user.name || '-' %></td>
+                            <td><%= user.username %></td>
+                            <td><span class="badge badge-dark"><%= user.role %></span></td>
+                            <td>
+                              <% if (user.isActive) { %>
+                                <span class="badge badge-success">active</span>
+                              <% } else { %>
+                                <span class="badge badge-secondary">inactive</span>
+                              <% } %>
+                            </td>
+                            <td><%= user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString('vi-VN') : '-' %></td>
+                            <td>
+                              <form method="post" action="/users/<%= user._id %>/status" class="mb-0">
+                                <input type="hidden" name="isActive" value="<%= user.isActive ? 'false' : 'true' %>">
+                                <button type="submit" class="btn btn-sm <%= user.isActive ? 'btn-outline-danger' : 'btn-outline-success' %>">
+                                  <%= user.isActive ? 'Khoá' : 'Mở' %>
+                                </button>
+                              </form>
+                            </td>
+                          </tr>
+                        <% }) %>
+                        <% if (!users.length) { %>
+                          <tr>
+                            <td colspan="6" class="text-center text-muted">Chưa có user nào.</td>
+                          </tr>
+                        <% } %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

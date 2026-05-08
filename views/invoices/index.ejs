@@ -1,6 +1,6 @@
 <html>
   <head>
-    <%- include('../header.ejs') %>
+    <%- include('../header.ejs', { title: 'Danh sách hóa đơn' }) %>
     <script src="/js/invoice-status.js"></script>
 
     <script>
@@ -158,76 +158,6 @@
           )
         }
       }
-      Vue.component('invoice-status', {
-        props: ['code'],
-        data: function () {
-          return {
-            // View
-            statuss: window.INVOICE_STATUSES,
-
-            // Model
-            invoiceModel: new ModelInvoice(this.code)
-          }
-        },
-        methods: {
-          // Model - VM Functions
-
-          change_invoice_status: function (statusKey) {
-            this.invoiceModel.changeInvoiceStatus(statusKey, this.code)
-          },
-          onUpdateData: function () {
-            this.$forceUpdate()
-          },
-
-          // View Functions Only
-          open_box: function () {
-            jQuery('#modal-change-invoice-status' + this.code).toggle()
-          },
-
-          compare_value(invoiceValue, value) {
-            return window.normalizeInvoiceStatus(invoiceValue) == value
-          },
-
-          getTitleByStatus(iStatus) {
-            return window.getInvoiceStatusMeta(iStatus).title
-          }
-        },
-        template: `
-                <div>
-                    <button class="btn btn-info" @click="open_box()">Trạng thái đơn hàng</button>
-                    <!-- The Modal -->
-                    <div class="modal" :id="'modal-change-invoice-status' + code">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                                <!-- Modal Header -->
-                                <div class="modal-header ">
-                                    <h4 class="modal-title">TRẠNG THÁI ĐƠN HÀNG</h4>
-                                    <button type="button" @click="open_box()">&times;</button>
-                                </div>
-                                <!-- Modal body -->
-                                <div class="modal-body">
-                                    <div v-for="status in statuss">
-                                        <button class="btn btn-block" :class="{ 'btn-info' : compare_value(invoiceModel.invoice.status, status.key), 'btn-outline-info' : !compare_value(invoiceModel.invoice.status, status.key)}" @click="change_invoice_status(status.key)">{{ status.title }}</button>
-                                    </div>
-                                    
-                                </div>
-                                <!-- Modal footer -->
-                                <div class="modal-footer">
-                                    
-                                    <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `,
-        created() {
-          // Init
-          // Bind with model
-          this.invoiceModel.onUpdateData = this.onUpdateData
-          // this.init_component();
-        }
-      })
     </script>
     <script src="/js/ViewModel/Customer/backbone.js"></script>
     <script src="/js/ViewModel/Customer/customer.js"></script>
@@ -235,10 +165,19 @@
 
     <script src="/js/ViewComponent/Invoice/invoice.js"></script>
   </head>
-  <body class="">
-    <%- include("../menu.ejs"); %>
-    <div id="view-all-invoices" class="container">
-      <h1>Danh sách hóa đơn</h1>
+  <body class="app-shell-body">
+    <div class="app-shell">
+      <%- include('../partials/sidebar.ejs', { currentPath: '/invoices', currentUser: currentUser }) %>
+      <div class="app-content">
+        <%- include('../partials/topbar.ejs', {
+          currentUser: currentUser,
+          title: 'Danh sách hóa đơn',
+          pageTitle: 'Danh sách hóa đơn',
+          pageSubtitle: 'Tra cứu nhanh hóa đơn theo ngày và mở chi tiết để xử lý.'
+        }) %>
+        <div class="app-page">
+    <div id="view-all-invoices">
+      <h2 class="h4">Danh sách hóa đơn</h2>
       <div class="row m-1">
         <div class="m-1">
           Chọn ngày:
@@ -275,15 +214,17 @@
                 :code="invoice.customerCode"
               ></customer-notes-count>
             </td>
-            <td>
-              <change-invoice-status-2
-                :code="invoice.code"
-              ></change-invoice-status-2>
-            </td>
+             <td>
+               <a class="btn btn-sm btn-outline-dark" :href="'/invoices/warehouse-check?code=' + invoice.code">Phiếu kho</a>
+               <a class="btn btn-sm btn-outline-secondary" :href="'/invoices/detail?code=' + invoice.code">Chi tiết</a>
+             </td>
             <!-- <td><button class="btn btn-primary">Giao</button></td> -->
           </tr>
         </tbody>
       </table>
+    </div>
+        </div>
+      </div>
     </div>
     <script>
       var app_all_invoices = new Vue({

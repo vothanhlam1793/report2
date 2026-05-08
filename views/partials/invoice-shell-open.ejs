@@ -1,0 +1,18 @@
+<html>
+  <head>
+    <%- include('../header.ejs', { title: title }) %>
+    <% if (typeof extraHead !== 'undefined') { %>
+      <%- extraHead %>
+    <% } %>
+  </head>
+  <body class="app-shell-body">
+    <div class="app-shell">
+      <%- include('./sidebar.ejs', { currentPath: currentPath, currentUser: currentUser }) %>
+      <div class="app-content">
+        <%- include('./topbar.ejs', {
+          currentUser: currentUser,
+          title: title,
+          pageTitle: pageTitle,
+          pageSubtitle: pageSubtitle
+        }) %>
+        <div class="app-page">

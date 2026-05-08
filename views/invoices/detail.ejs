@@ -1,867 +1,451 @@
-<html>
-    <head>
-        <%- include('../header.ejs') %>
-        <script src="/js/invoice-status.js"></script>
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Chi tiết hóa đơn',
+  pageTitle: 'Chi tiết hóa đơn',
+  pageSubtitle: 'Hồ sơ vận hành theo referenceCode, gom toàn bộ thông tin liên đới của đơn qua các bước xử lý.',
+  currentPath: '/invoices',
+  currentUser: currentUser,
+  extraHead: '<script src="/js/invoice-status.js"></script>'
+}) %>
+<div id="invoice-detail-page">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải hồ sơ đơn hàng...</div>
+  </div>
 
-        
-        <script>
-            var Invoice = Backbone.Model.extend({
-                urlRoot: "/api/invoices"
-            })
+  <template v-if="!isLoading && currentInvoice.code">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <div class="app-step-chip">Reference trung tâm | Tổng hợp B1 -> B9</div>
+        <h2 class="h4 mb-1">{{ currentInvoice.code }}</h2>
+        <div class="text-muted">Mã tham chiếu: {{ detail.referenceCode }}</div>
+      </div>
+      <div class="btn-group">
+        <a class="btn btn-outline-dark" :href="'/invoices/warehouse-check?code=' + currentInvoice.code">Phiếu kho</a>
+        <a class="btn btn-outline-secondary" :href="'/invoices/prepare?code=' + currentInvoice.code">Cần duyệt kho</a>
+        <a class="btn btn-outline-secondary" href="/invoices/dashboard">Dashboard</a>
+      </div>
+    </div>
 
-            var ProductBarcode = Backbone.Model.extend({
-                urlRoot: "/api/productBarcodes"
-            })
-        </script>
-    </head>
-    <body>
-        <%- include("../menu.ejs"); %>
-        <div id="view-detail-invoice">
-        
-            <!-- <invoice-packages code="HD005547"></invoice-packages> -->
-            <!-- <create-customer-note code="KH000561"></create-customer-note> -->
-            <!-- <customer-notes code="KH000561"></customer-notes> -->
-            <!-- <change-invoice-status code="HD005547"></change-invoice-status> -->
-    
-            <div class="container" v-if="invoiceModel.invoice_kiot.code">
-                <h2>Đơn hàng {{ invoiceModel.invoice_kiot.code }}</h2>
-                <button class="btn btn-warning" @click="turn_back()">Trang trước</button>                
-                <div class="my-3 btn-group">
-                    <a class="btn btn-outline-secondary" :href="'/invoices/prepare?code=' + invoiceModel.invoice_kiot.code">Chuẩn bị đơn</a>
-                    <a class="btn btn-outline-secondary" :href="'/invoices/package?code=' + invoiceModel.invoice_kiot.code">Đóng hàng</a>
-                    <a class="btn btn-outline-secondary" :href="'/invoices/ship?code=' + invoiceModel.invoice_kiot.code">Giao chành</a>
-                </div>
-                <customer-notes :code="invoiceModel.invoice_kiot.customerCode"></customer-notes>
-                <div class="row m-1">
-                    <!-- <create-customer-note :code="invoiceModel.invoice_kiot.customerCode" class="col"></create-customer-note> -->
-                    <change-invoice-status :code="invoiceModel.invoice_kiot.code" class="col"></change-invoice-status>
-                </div>
-                
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <td>Check</td>
-                            <td>Tên</td>
-                            <td>Số lượng</td>
-                            <td>Hành động</td>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="product in invoiceModel.invoice_kiot.invoiceDetails">
-                            <td><input type="checkbox" class="form-control" @change="changeInvoiceProductCheck(invoiceModel.invoice_kiot.code, product.productCode)"></td>
-                            <td>{{ product.productName }}<br><br><view-image :code="product.productCode" :product="product"></view-image></td>
-                            <td>{{ product.quantity }}</td>
-                            <td><save-barcodes-product :invoice_code="invoiceModel.invoice_kiot.code" :product_code="product.productCode"></save-barcodes-product></td>
-                        </tr>
-                    </tbody>
-                </table>
-    
-                <invoice-packages code="invoiceModel.invoice_kiot.code"></invoice-packages>
-            </div>
+    <div class="alert alert-warning" v-if="invoiceState.changeWarningSummary">
+      <div class="font-weight-bold">Cảnh báo thay đổi đơn</div>
+      <div>{{ invoiceState.changeWarningSummary }}</div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Trạng thái hiện tại</div>
+            <div class="mt-2"><span class="badge" :class="invoiceBadgeClass(invoiceState.status)">{{ invoiceStatusLabel(invoiceState.status) }}</span></div>
+            <div class="small text-muted mt-3">Khách hàng</div>
+            <div>{{ currentInvoice.customerName || currentInvoice.customerCode || '-' }}</div>
+          </div>
         </div>
-        <script>
-            var f1 = function(){};
-            // console.log("hi");
-            function connect() {
-                //var ws = new WebSocket("wss://dir.creta.work/public/messagepublish");
-                // console.log("aaaa");
-                var ws = new WebSocket("ws://svr3.creta.vn:1888/scan_barcode");
-                ws.onopen = function() {
-                    // subscribe to some channels
-                    console.log("opened")
-                };
-    
-                ws.onmessage = function(e) {
-                    // var d = JSON.parse(e.data);
-                    // if(d.function == 'add_code'){
-                    //     app.add_code(d.code);
-                    // }
-                    // console.log(e.data);
-                    var d;
-                    try {
-                        d = JSON.parse(e.data);
-                    } catch(e){
-                        d = {code: ""}
-                    }
-                    f1(d.code);
-                    // if(e.data.code){
-                        
-                    // }
-                    // f1(e.data);
-                };
-    
-                ws.onclose = function(e) {
-                    // app.not_ready();
-                    console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
-                    setTimeout(function() {
-                    connect();
-                    }, 1000);
-                };
-    
-                ws.onerror = function(err) {
-                    console.log(err);
-                    console.error('Socket encountered error: ', err.message, 'Closing socket');
-                    ws.close();
-                };
-                return ws;
-            }
-            connect();
-            
-        </script>
-        <script>
-            class ModelInvoice {
-                constructor(code){
-                    this.invoice = {};
-                    this.invoice_kiot = {};
-                    // this.invoice_products = [];
-                    this.onUpdateData = function(){};
-                    this.getInvoiceByCode(code);
-                }
-                getInvoiceByCode = (code) => {
-                    $.ajax({
-                        url: "/api/invoices/code/" + code,
-                        method: "GET",
-                        success: (data) => {
-                            this.invoice = data;
-                        }
-                    })
-                    $.ajax({
-                        url: "/api/kiot/invoices/" + code,
-                        method: "GET",
-                        success: (data) => {
-                            this.invoice_kiot = data;
-                        }
-                    })
-                }
-                getAllInvoiceProducts = (invoiceCode) => {
-                    var that = this;
-                    
-                    $.ajax({
-                        url: "/api/invoiceProducts" + "?invoiceCode=" + invoiceCode,
-                        method: "GET",
-                        success: function(data){
-                            that.invoice_products = data;
-                        }
-                    })
-                }
-    
-                addInvoiceProductCode = (invoiceCode, productCode, code) => {
-                    $.ajax({
-                        url: "/api/invoiceProducts" + "?invoiceCode=" + invoiceCode + "&productCode=" + productCode,
-                        method: "GET",
-                        success: function(data){
-                            if(data.length > 0){
-                                var ip = new InvoiceProduct({id : data[0].id});
-                                if(data.codes){
-                                    data.codes.push(code);
-                                    ip.set("codes", data.codes);
-                                } else {
-                                    ip.set("codes", [code]);
-                                }
-                            }
-                            else {
-                                var ip = new InvoiceProduct();
-                                ip.set("codes", [code]);                        
-                            }
-                            ip.save({}, {
-                                success: function(r, e){
-                                    alert("SUCCESS: " + productCode);
-                                }
-                            })
-                        }
-    
-                    })
-                }
-                
-                changeInvoiceStatus = (status, code) => {
-                    var that = this;
-                    if(this.invoice.id){
-                        var inv = new Invoice({id: this.invoice.id});
-                    } else {
-                        var inv = new Invoice();
-                    }
-                    inv.set("status", status);
-                    inv.set("code", code);
-                    inv.save({}, {
-                        success: function(r, e){
-                            // alert("Success: " + code);
-                            that.getInvoiceByCode(code);
-                            that.onUpdateData();
-                        }
-                    })
-                }
-            }
-            class ModelProDuctBarcodes {
-                constructor(productCode, invoiceCode){
-                    this.productBarcodes = [];
-                    this.invoiceProductBarcodes = [];
-                    this.invoiceKiot = {}
-                    this.onUpdateData = function(){}
-                    this.initProductBarcodes(productCode, invoiceCode);
-                }
-                initProductBarcodes = (productCode, invoiceCode) => {
-                    this.getProductBarcodeByProductCode(productCode, invoiceCode);
-                    // console.log(invoiceCode);
-                    
-                    this.getInvoiceKiot(invoiceCode);
-                }
-                getInvoiceKiot = (invoiceCode) => {
-                    var that = this;
-                    $.ajax({
-                        url: "/api/kiot/invoices/" + invoiceCode,
-                        method: "GET",
-                        success: (data) => {
-                            that.invoiceKiot = data;
-                            // console.log(that.invoiceKiot);
-                            that.onUpdateData();
-                        }
-                    })
-                }
-                filterBarcodesByInvoice = (invoiceCode, barcodes) => {
-                    var that = this;
-                    var ipBarcodes = [];
-                    this.productBarcodes.forEach( barcode => {
-                        if(barcode.infos){
-                            var flag = false;
-                            barcode.infos.forEach( (info) =>{
-                                if( info.code == invoiceCode ){
-                                    flag = true;
-                                }
-                            })
-                            if (flag){
-                                ipBarcodes.push(barcode);
-                            }
-                        }                    
-                    })
-                    return ipBarcodes;
-                }
-                getProductBarcodeByProductCode = (productCode, invoiceCode) => {
-                    var that = this;
-                    $.ajax({
-                        url: "/api/productBarcodes" + "?productCode=" + productCode,
-                        method: "GET",
-                        success: function(data){
-                            // console.log(data);
-                            that.productBarcodes = data;
-                            that.invoiceProductBarcodes = that.filterBarcodesByInvoice(invoiceCode, data);
-                            // console.log(that.invoiceProductBarcodes);
-                            that.onUpdateData();
-                        }
-                    })
-                }
-                addInvoiceProductBarcode = (invoiceCode, productCode, productName, code) => {
-                    console.log(invoiceCode, productCode, productName, code);
-                    var that = this;
-                    var info = {
-                        code: invoiceCode,
-                        type: "HOA DON",
-                        content: "Xuất hàng",
-                        date: moment().format()
-                    }
-                    
-                    $.ajax({
-                        url : "/api/productBarcodes" + "?productCode=" + productCode + "&code=" + code,
-                        method: "GET",
-                        success: function(barcodes){
-                            // console.log(barcodes);
-                            if( barcodes.length > 0 ){
-                                console.log("1");
-                                var product_barcode = new ProductBarcode({ id: barcodes[0].id});
-                                if(barcodes[0].infos){
-                                    barcodes[0].infos.push(info);
-                                    product_barcode.set("infos", barcodes[0].infos);
-                                }
-                                else {
-                                    product_barcode.set("infos", [info]);
-                                }
-                                product_barcode.save({}, {
-                                    sucess: function(r, e){
-                                        console.log("success")
-                                        that.initProductBarcodes();
-                                    },
-                                    error: function(e){
-                                        console.log("err", e);
-                                    }
-                                })
-                            }
-                            else {
-                                // console.log("2");
-                                var product_barcode = new ProductBarcode();
-                                product_barcode.set("productCode", productCode);
-                                product_barcode.set("productName", productName);
-                                
-                                product_barcode.set("code", code);
-                                product_barcode.set("infos", [info]);
-                                // console.log(product_barcode);
-                                
-                                product_barcode.save({}, {
-                                    success: function(r, e){
-                                        // console.log("succees")
-                                        // console.log(r);
-                                        that.initProductBarcodes(productCode, invoiceCode);
-                                    },
-                                    error: function(e){
-                                        console.log("err", e);
-                                    }
-                                })
-                            }
-                        }
-                    })
-                }
-                deleteInvoiveProductBarcode = (invoiceCode, productCode, code) => {
-                    // console.log(invoiceCode, productCode, code);
-                    var that =this;
-                    $.ajax({
-                        url : "/api/productBarcodes" + "?productCode=" + productCode + "&code=" + code,
-                        method: "GET",
-                        success: function(barcodes){
-                            // console.log(barcodes);
-                            if( barcodes.length > 0 ){
-                                var bc = barcodes[0].infos.filter((info)=>{
-                                    return (info.code != invoiceCode)                            
-                                })
-                                if( bc.length == barcodes[0].infos.length){
-    
-                                }
-                                else{
-                                    var product_barcode = new ProductBarcode({id: barcodes[0].id});
-                                    product_barcode.set("infos", bc);
-                                    product_barcode.save({},{
-                                        success: function(r, e){
-                                            that.initProductBarcodes(productCode, invoiceCode);
-                                        }
-                                    })
-                                }
-                            }
-                        }
-                    })
-                }
-            }
-            Vue.component('invoice-packages', {
-                props:['code'],
-                data: function(){
-                    return {
-                        package_count : 0,
-                        invoice: {}
-                    }
-                },
-                methods: {
-                    get_package_count: function(){
-                        // console.log(this.code);
-                        var that = this;
-                        $.ajax({
-                            url: "/api/invoices/code/" + this.code,
-                            method: "GET",
-                            success: (data) => {
-                                // console.log(data);
-                                that.invoice = data;
-                                if(data.notes){
-                                    if (data.notes.length > 0){
-                                        data.notes.forEach((note)=> {
-                                            if(note.type == "SO_KIEN_HANG"){
-                                                that.package_count = note.value;
-                                            }
-                                        })
-                                    }
-                                }
-                                
-                            }
-                        })
-                    },
-                    save_package_count: function(){
-                        // console.log("saving...");
-                        var that = this;
-                        if(this.invoice.id){
-                            // console.log(this.invoice.id);
-                            var invoice = new Invoice({id : this.invoice.id});
-                            if(this.invoice.notes){
-                                if (this.invoice.notes.length > 0){
-                                    var count = 0;
-                                    this.invoice.notes.forEach((note) => {                                
-                                        if(note.type == "SO_KIEN_HANG"){
-                                            count++;
-                                            note.value = that.package_count;
-                                        }
-                                    })
-                                    if (count == 0){
-                                        this.invoice.notes.push({
-                                            type: "SO_KIEN_HANG",
-                                            value: that.package_count
-                                        })
-                                    }
-                                } else {
-                                    this.invoice.notes.push({
-                                        type: "SO_KIEN_HANG",
-                                        value: that.package_count
-                                    })
-                                }
-                            } else {
-                                var invoiceNotes = [{
-                                    type: "SO_KIEN_HANG",
-                                    value: that.package_count
-                                }]
-                                this.invoice.notes = invoiceNotes;
-                            }                        
-                            
-                            invoice.set("notes", this.invoice.notes);
-                            
-                        }
-                        else {
-                            var invoice = new Invoice();
-                            var invoiceNotes = [{
-                                type: "SO_KIEN_HANG",
-                                value: that.package_count
-                            }]
-                            invoice.set("notes", invoiceNotes);
-                        }
-                        invoice.set("code", this.code);
-                        
-                        invoice.save({},{
-                            success: function(r, e){
-                                alert("SUCCESS: " + that.code);
-                            }
-                         })
-                        
-                    }
-                },
-                template: `
-                    <div>
-                        <h3>Số kiện hàng</h3>
-                        <input v-model="package_count" type="number">
-                        <button @click="save_package_count()">Lưu</button>
-                    </div>
-                `,
-                created(){
-                    this.get_package_count();
-                }
-            })
-    
-            Vue.component('create-customer-note', {
-                props:['code'],
-                data: function(){
-                    return {
-                        customer: {},
-                        customer_name: "",
-                        task_description: ""
-                    }
-                },
-                methods: {
-                    init_component: function(){
-                        var that = this;
-                        $.get("/creta/customer/" + this.code, function(data){
-                            that.customer_name = data.kiot.name ? data.kiot.name : "";
-                        })
-                    },
-                    create_customer_note: function(){
-                        var that = this;
-                        var task = new Task();
-                        task.set("title", this.code);
-                        task.set("description", this.task_description);
-                        task.set("type", "NHAC_GOI_HANG");
-                        
-                        task.save({}, {
-                            success: function(r, e){
-                                alert("SUCCESS: " + that.code);
-                            }
-                        })
-                    },
-                    open_box: function(){
-                        // console.log("Here");
-                        // console.log(jQuery("#modal"+this.code));
-                        jQuery("#modal-create-customer-task"+this.code.substring(0,8)).toggle();
-                        // if(!this.customer.code){
-                        //     var that = this;
-                        //     $.get("/creta/customer/"+this.code, function(data){
-                        //         that.customer = data;
-                        //     })
-                        // }
-                    }
-                },
-                template: `
-                <div>
-                    <button class="btn btn-info" @click="open_box()">Thêm ghi chú</button>
-                    <!-- The Modal -->
-                    <div class="modal" :id="'modal-create-customer-task'+code.substring(0,8)">
-                        <div class="modal-dialog">
-                            <div class="modal-content">
-                            <!-- Modal Header -->
-                            <div class="modal-header ">
-                                <h4 class="modal-title">GHI CHÚ GỬI HÀNG</h4>
-                                <button type="button" @click="open_box()">&times;</button>
-                            </div>
-                            <!-- Modal body -->
-                            <div class="modal-body">
-                                <div>
-                                    <span>Khách hàng: </span><span><strong>
-                                    {{ customer_name }}</strong></span>
-                                    <textarea class="form-control" v-model="task_description"></textarea>
-                                </div>
-                            </div>
-                            <!-- Modal footer -->
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-success" @click="create_customer_note(), open_box()">Lưu</button>
-                                <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
-                            </div>
-                            </div>
-                        </div>
-                    </div>
+      </div>
+      <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Ngày đơn</div>
+            <div class="mt-2">{{ formatDate(currentInvoice.purchaseDate) }}</div>
+            <div class="small text-muted mt-3">Tổng tiền</div>
+            <div>{{ formatMoney(currentInvoice.total) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Warehouse Check mới nhất</div>
+            <div class="mt-2"><span class="badge" :class="whcBadgeClass(latestWarehouseCheck.status)">{{ whcStatusTitle(latestWarehouseCheck.status) }}</span></div>
+            <div class="small text-muted mt-3">Kết luận kho</div>
+            <div>{{ conclusionTitle(latestWarehouseCheck.stockConclusion) }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Thông tin liên đới</div>
+            <div class="mt-2">{{ relatedInvoices.length }} version đơn</div>
+            <div>{{ detail.invoiceEvents.length }} log xử lý</div>
+            <div>{{ packageCountLabel() }} kiện hàng</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-lg-4 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-3">Các version liên quan</h5>
+            <div class="list-group list-group-flush" v-if="relatedInvoices.length">
+              <a
+                class="list-group-item list-group-item-action"
+                v-for="invoice in relatedInvoices"
+                :key="invoice.code"
+                :href="'/invoices/detail?code=' + invoice.code"
+              >
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <div class="font-weight-bold">{{ invoice.code }}</div>
+                    <div class="small text-muted">{{ invoice.customerName || invoice.customerCode || '-' }}</div>
+                  </div>
+                  <span class="badge" :class="invoiceBadgeClass(invoice.localStatus)">{{ invoiceStatusLabel(invoice.localStatus) }}</span>
                 </div>
-                `,
-                created(){
-                    this.init_component();
-                }
-            })
-    
-            Vue.component('customer-notes', {
-                props:['code'],
-                data: function(){
-                    return {
-                        tasks: [],
-                        customer_name: ""
-                    }
-                },
-                methods: {
-                    init_component: function(){
-                        var that = this;
-                        $.get("/creta/customer/" + this.code, function(data){
-                            that.customer_name = data.kiot.name ? data.kiot.name : "";
-                        })
-                        $.get("/api/tasks", function(tasks){
-                            // console.log(tasks);
-                            that.tasks = tasks.filter((task) => {
-                                return task.title == that.code;
-                            })
-                        })
-                    },
-                    complete_task: function(task_id){
-                        var that = this;
-                        var task_bb = new Task({id: task_id});
-                        task_bb.set("status", "DONE");
-                        task_bb.save({}, {
-                            success: function(r, e){
-                                // alert("SUCCESS!");
-                                that.init_component();
-                            }
-                        })
-                    },
-                    delete_task: function(task_id){
-                        var that=this;
-                        // console.log("deleting...")
-                        var task = new Task({id: task_id});
-                        task.destroy({
-                            success: function(r, e){
-                                // alert("SUCCESS!");
-                                that.init_component();
-                            }
-                        })
-                    }
-                },
-                template: `
-                <div>
-                    <h5><strong>{{ customer_name }}</strong> - có ghi chú sau: </h5>
-                    <table class="table table-bordered">
-                        
-                        <tbody>
-                            <tr v-for="(task, index) in tasks">
-                                <td>{{ index + 1 }}</td>
-                                <td>{{ task.description }}</td>
-                                <td><button class="btn btn-success" @click="complete_task(task.id)" :disabled="(task.status == 'DONE') ? true : false ">{{ (task.status == "DONE") ? "Đã hoàn thành" : "Hoàn thành"}}</button></td>
-                                <td><button class="btn btn-danger" @click="delete_task(task.id)">Xóa</button></td>
-                            </tr>    
-                        </tbody>    
-                    </table>
+              </a>
+            </div>
+            <div class="text-muted" v-else>Chưa có version liên quan.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-8 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-3">Timeline xử lý</h5>
+            <div v-if="detail.invoiceEvents.length">
+              <div class="border rounded p-3 mb-2" v-for="event in detail.invoiceEvents" :key="event.id">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div class="font-weight-bold">{{ eventTitle(event) }}</div>
+                    <div class="text-muted">{{ event.summary || 'Không có mô tả' }}</div>
+                  </div>
+                  <span class="badge" :class="eventBadgeClass(event)">{{ eventStatusLabel(event) }}</span>
                 </div>
-                `,
-                created(){
-                    this.init_component();
-                }
-            })
-            
-            Vue.component('change-invoice-status', {
-                props: ["code"],
-                data: function(){
-                    return {
-                        // View
-                        statuss: window.INVOICE_STATUSES,
-    
-                        // Model
-                        invoiceModel: new ModelInvoice(this.code)
-                    }
-                },
-                methods: {
-                    // Model - VM Functions
-    
-                    change_invoice_status: function(statusKey){
-                        this.invoiceModel.changeInvoiceStatus(statusKey, this.code);
-                    },
-                    onUpdateData: function(){
-                        this.$forceUpdate();
-                    },
-    
-                    // View Functions Only
-                    open_box: function(){
-                        jQuery("#modal-change-invoice-status"+this.code.substring(0,8)).toggle();
-                    },
-    
-                    compare_value( invoiceValue, value){
-                        return (window.normalizeInvoiceStatus(invoiceValue) == value);
-                    },
+                <div class="small text-muted mt-2">{{ formatEventMeta(event) }}</div>
+                <div class="small mt-2" v-if="eventExtraText(event)">{{ eventExtraText(event) }}</div>
+              </div>
+            </div>
+            <div class="text-muted" v-else>Chưa có timeline xử lý cho reference này.</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-                    getTitleByStatus (iStatus){
-                        return window.getInvoiceStatusMeta(iStatus).title;
-                    }
-                },
-                template: `
-                    <div>
-                        <button class="btn btn-info" @click="open_box()">Trạng thái đơn hàng</button>
-                        <!-- The Modal -->
-                        <div class="modal" :id="'modal-change-invoice-status' + code.substring(0,8)">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <!-- Modal Header -->
-                                    <div class="modal-header ">
-                                        <h4 class="modal-title">TRẠNG THÁI ĐƠN HÀNG</h4>
-                                        <button type="button" @click="open_box()">&times;</button>
-                                    </div>
-                                    <!-- Modal body -->
-                                    <div class="modal-body">
-                                        <div v-for="status in statuss">
-                                            <button class="btn btn-block" :class="{ 'btn-info' : compare_value(invoiceModel.invoice.status, status.key), 'btn-outline-info' : !compare_value(invoiceModel.invoice.status, status.key)}" @click="change_invoice_status(status.key)">{{ status.title }}</button>
-                                        </div>
-                                        
-                                    </div>
-                                    <!-- Modal footer -->
-                                    <div class="modal-footer">
-                                        
-                                        <button type="button" class="btn btn-danger" @click="open_box()">Close</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `,
-                created(){
-                    // Init
-                    // Bind with model
-                    this.invoiceModel.onUpdateData = this.onUpdateData;
-                    // this.init_component();
-                }
-            })
-            
-            
-            Vue.component('save-barcodes-product', {
-                props: ['invoice_code', 'product_code'],
-                data: function(){
-                    return{
-                        productBarcodesModel : new ModelProDuctBarcodes(this.product_code, this.invoice_code),
-                        new_barcode: ""
-                    }
-                },
-                methods: {
-                    init_component: function(){
-                        // console.log(this.invoice_code, this.product_code);
-                    },
-                    onUpdateData: function(){
-                        this.$forceUpdate();
-                    },
-                    delete_barcode: function(barcode){
-                        if(barcode.length == 0){
-                            // console.log("barcode ko duoc de trong");
-                        } else{
-                            this.productBarcodesModel.deleteInvoiveProductBarcode(this.invoice_code, this.product_code, barcode);
-                        }                    
-                    },
-                    add_barcode: function(barcode){
-                        if(barcode.length == 0){
-                            // console.log("barcode ko duoc de trong");
-                        }
-                        else {
-                            this.productBarcodesModel.addInvoiceProductBarcode(this.invoice_code, this.product_code, this.getName(this.product_code, this.productBarcodesModel.invoiceKiot) , barcode);
-                        }                    
-                    },
-                    getName: function(productCode, invoice){
-                        var result = "";
-                        if(invoice.invoiceDetails){
-                            invoice.invoiceDetails.forEach((product) => {
-                                if(product.productCode == productCode){
-                                    result = product.productName;
-                                }
-                            })
-                        }                    
-                        return result;
-                    },
-                    // View Functions Only
-                    open_box: function(){
-                        jQuery("#modal-save-barcodes-product"+this.product_code.substring(0,8)).show();
-                        f1 = this.add_barcode;
-                    },
-                    close_box: function(){
-                        jQuery("#modal-save-barcodes-product"+this.product_code.substring(0,8)).hide();
-                        f1 = function(){}
-                    },
-                },
-                template: `
-                    <div>
-                        <div class="mb-1">
-                            <button class="btn btn-info" @click="open_box()">Nhập code <span class="badge badge-light">{{ productBarcodesModel.invoiceProductBarcodes.length }}</span> </button>
-                            <a :href="'/invoices/barcode/' + invoice_code + '/' + product_code"
-                               class="btn btn-success">📷 Camera</a>
-                        </div>
-                        <!-- The Modal -->
-                        <div class="modal" :id="'modal-save-barcodes-product' + product_code.substring(0,8)">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <!-- Modal Header -->
-                                    <div class="modal-header ">
-                                        <h4 class="modal-title">{{ invoice_code }} - {{ getName(product_code, productBarcodesModel.invoiceKiot) }}</h4>
-                                        <button type="button" @click="close_box()">&times;</button>
-                                    </div>
-                                    <!-- Modal body -->
-                                    <div class="modal-body">
-                                        <div v-for="barcode in productBarcodesModel.invoiceProductBarcodes" class="text-center alert alert-info">
-                                            <strong>{{ barcode.code }}</strong> <button @click="delete_barcode(barcode.code)">&times;</button>
-                                        </div>
-                                        
-                                        <div>
-                                            <strong>Nhập tay: </strong><input class="form-control" v-model="new_barcode" @keyup.enter="add_barcode(new_barcode)">
-                                            <button class="btn btn-warning" @click="add_barcode(new_barcode)">Thêm</button>
-                                        </div>
-                                    </div>
-                                    <!-- Modal footer -->
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-danger" @click="close_box()">Close</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `,
-                created(){
-                    this.productBarcodesModel.onUpdateData = this.onUpdateData;
-                    this.init_component()                
-                    // this.productBarcodesModel.initProductBarcodes(this.productCode, this.invoiceCode);
-                }
-            })
-        </script>
-        <script>
-            Vue.component('view-image', {
-                props: ['code', 'product'],
-                template: `
-                    <div>
-                        <button class="btn btn-warning" @click="openImage()">Hình ảnh</button>
-                        <div>
-                            <div class="modal" :id="'myModal' + code">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
+    <div class="row mb-3">
+      <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-3">Warehouse Check</h5>
+            <div v-if="detail.warehouseChecks.length">
+              <div class="border rounded p-3 mb-2" v-for="check in detail.warehouseChecks" :key="check.id">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div class="font-weight-bold">{{ check.invoiceCode }}</div>
+                    <div class="text-muted">{{ check.summary || 'Không có tóm tắt' }}</div>
+                  </div>
+                  <div class="text-right">
+                    <span class="badge mr-1" :class="whcBadgeClass(check.status)">{{ whcStatusTitle(check.status) }}</span>
+                    <span class="badge" :class="conclusionBadgeClass(check.stockConclusion)">{{ conclusionTitle(check.stockConclusion) }}</span>
+                  </div>
+                </div>
+                <div class="small text-muted mt-2">
+                  Tạo bởi {{ check.createdByName || check.createdByUsername || 'Hệ thống' }} | cập nhật {{ formatDate(check.updatedAt) }}
+                </div>
+                <a class="btn btn-sm btn-outline-secondary mt-2" :href="'/invoices/warehouse-check?code=' + check.invoiceCode">Mở phiếu</a>
+              </div>
+            </div>
+            <div class="text-muted" v-else>Chưa có warehouse check.</div>
+          </div>
+        </div>
+      </div>
 
-                                    <!-- Modal Header -->
-                                    <div class="modal-header">
-                                        <h4 class="modal-title">{{product.productName}}</h4>
-                                        <button type="button" class="close" data-dismiss="modal" @click="closeImage()">&times;</button>
-                                    </div>
+      <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-3">Thiếu hàng và quyết định tiếp theo</h5>
+            <div v-if="latestWarehouseCheck.id">
+              <div class="mb-2"><strong>Decision status:</strong> {{ decisionTitle(latestWarehouseCheck.decisionStatus) }}</div>
+              <div class="mb-2"><strong>Sale decision:</strong> {{ saleDecisionTitle(latestWarehouseCheck.saleDecision) }}</div>
+              <div class="mb-2"><strong>Summary:</strong> {{ latestWarehouseCheck.summary || '-' }}</div>
+              <div class="text-muted small">Reviewed by {{ latestWarehouseCheck.reviewedByName || latestWarehouseCheck.reviewedByUsername || '-' }}</div>
+            </div>
+            <div class="text-muted" v-else>Chưa có dữ liệu thiếu hàng.</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-                                    <!-- Modal body -->
-                                    <div class="modal-body">
-                                        <div v-if="srcImages.length == 0">
-                                            <p>Không có hình ảnh</p>
-                                        </div>
-                                        <div v-else>
-                                            <img :src="srcImages[index]" class="img-thumbnail" :alt="product.productName">
-                                            <div class="row my-3">
-                                                <div class="col text-center">
-                                                    <button v-if="index == 0" class="btn btn-warning" @click="chose(-1)" disabled> < </button>
-                                                    <button v-else class="btn btn-warning" @click="chose(-1)"> < </button> | 
-                                                    <button v-if="index == srcImages.length - 1" class="btn btn-warning" @click="chose(1)" disabled> > </button>    
-                                                    <button v-else class="btn btn-warning" @click="chose(1)"> > </button>    
-                                                </div>    
-                                            </div>
-                                        </div>
-                                    </div>
+    <div class="row mb-3">
+      <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-3">Phiếu đặt hàng nhanh</h5>
+            <div v-if="detail.quickPurchaseRequests.length">
+              <div class="border rounded p-3 mb-2" v-for="item in detail.quickPurchaseRequests" :key="item.id">
+                <div class="font-weight-bold">{{ item.summary || 'Phiếu đặt hàng nhanh' }}</div>
+                <div class="small text-muted">{{ formatDate(item.createdAt) }} | {{ item.createdByName || item.createdByUsername || '-' }}</div>
+                <div class="small mt-1">{{ item.items ? item.items.length : 0 }} mã sản phẩm</div>
+              </div>
+            </div>
+            <div class="text-muted" v-else>Chưa có phiếu đặt hàng nhanh.</div>
+          </div>
+        </div>
+      </div>
 
-                                    <!-- Modal footer -->
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-danger" @click="closeImage()">Đóng</button>
-                                    </div>
+      <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-3">Phiếu nhập hàng nhanh</h5>
+            <div v-if="detail.quickStockReceipts.length">
+              <div class="border rounded p-3 mb-2" v-for="item in detail.quickStockReceipts" :key="item.id">
+                <div class="font-weight-bold">{{ item.summary || 'Phiếu nhập hàng nhanh' }}</div>
+                <div class="small text-muted">{{ formatDate(item.createdAt) }} | {{ item.createdByName || item.createdByUsername || '-' }}</div>
+                <div class="small mt-1">{{ item.items ? item.items.length : 0 }} mã sản phẩm</div>
+              </div>
+            </div>
+            <div class="text-muted" v-else>Chưa có phiếu nhập hàng nhanh.</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-                                    </div>
-                                </div>
-                            </div>    
-                        </div>
-                    </div>
-                `,
-                data(){
-                    return {
-                        srcImages: [],
-                        index: 0
-                    }
-                },
-                methods: {
-                    openImage(){
-                        jQuery("#myModal" + this.$props.code).show();
-                        this.loadImage();
-                    },
-                    closeImage(){
-                        jQuery("#myModal" + this.$props.code).hide();
-                    },
-                    loadImage(){
-                        var that = this;
-                        $.ajax({
-                            url: "/api/kiot/products/" + this.$props.code,
-                            method: "GET",
-                            success: (data) => {
-                                if(data.images){
-                                    that.srcImages = data.images
-                                }
-                            }
-                        })
-                    },
-                    chose(d){
-                        if((this.index == 0) && (d < 0)){
-                            return;
-                        } 
-                        if((this.index == this.srcImages.length - 1) && (d > 0)){
-                            return;
-                        }
-                        this.index += d;
+    <div class="row mb-3">
+      <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-3">Đóng hàng và giao vận</h5>
+            <div class="mb-2"><strong>Số kiện:</strong> {{ packageCountLabel() }}</div>
+            <div class="mb-2"><strong>Phiếu / ứng ship:</strong> {{ detail.phieus.length }}</div>
+            <div v-if="detail.phieus.length">
+              <div class="border rounded p-3 mb-2" v-for="item in detail.phieus" :key="item.id">
+                <div class="font-weight-bold">{{ item.type || 'Phiếu giao vận' }}</div>
+                <div class="small text-muted">{{ formatDate(item.implementationDate || item.createdAt) }} | {{ item.executorName || item.executorCode || '-' }}</div>
+                <div class="small mt-1">{{ item.description || '-' }}</div>
+              </div>
+            </div>
+            <div class="text-muted" v-else>Chưa có phiếu giao vận liên quan trên mã đơn hiện tại.</div>
+          </div>
+        </div>
+      </div>
 
+      <div class="col-lg-6 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h5 class="mb-3">Thông tin nội bộ</h5>
+            <div class="mb-2"><strong>Latest WHC ID:</strong> {{ invoiceState.latestWarehouseCheckId || '-' }}</div>
+            <div class="mb-2"><strong>Related codes local:</strong> {{ (invoiceState.relatedInvoiceCodes || []).join(', ') || '-' }}</div>
+            <div class="mb-2"><strong>Notes:</strong> {{ (invoiceState.notes || []).length }}</div>
+            <div class="mb-2"><strong>Actions:</strong> {{ (invoiceState.actions || []).length }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-                        if(this.index == 0){
-                            // Disable prev
-                        
-                        }
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <h5 class="mb-3">Sản phẩm của đơn hiện tại</h5>
+        <table class="table table-bordered table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Mã SP</th>
+              <th>Tên sản phẩm</th>
+              <th>Số lượng</th>
+              <th>Đơn giá</th>
+              <th>Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="product in currentInvoice.invoiceDetails" :key="product.id || product.productCode">
+              <td>{{ product.productCode || '-' }}</td>
+              <td>{{ product.productName || '-' }}</td>
+              <td>{{ product.quantity || 0 }}</td>
+              <td>{{ formatMoney(product.price) }}</td>
+              <td>{{ formatMoney(product.subTotal) }}</td>
+            </tr>
+            <tr v-if="!currentInvoice.invoiceDetails || currentInvoice.invoiceDetails.length === 0">
+              <td colspan="5" class="text-center text-muted">Không có sản phẩm.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
 
-                        if(this.index == this.srcImages.length - 1){
-                            // Disable next
+  <div class="alert alert-warning" v-if="!isLoading && !currentInvoice.code">
+    Không tìm thấy dữ liệu hóa đơn theo mã đã chọn.
+  </div>
+</div>
 
-                        }
-                    }
-                }
-            })
-        </script>
-        <script>
-            const urlSearchParams = new URLSearchParams(window.location.search);
-            const params = Object.fromEntries(urlSearchParams.entries());
-            if(!params.code){
-                alert("Mã hóa đơn không được để trống");
-            }
-            var view_detail_invoice = new Vue({
-                el: "#view-detail-invoice",
-                data: {
-                    invoiceModel: new ModelInvoice( params.code )
-                },
-                methods: {
-                    onUpdateData: function(){
-                        this.$forceUpdate();
-                    },
-                    turn_back: function(){
-                        window.history.back();
-                    }
-                },
-                created(){
-                    this.invoiceModel.onUpdateData = this.onUpdateData;
-                }
-            })
-        </script>
-    </body>
-    
-</html>
+<script>
+  new Vue({
+    el: '#invoice-detail-page',
+    data: {
+      detail: {
+        referenceCode: '',
+        currentInvoice: {},
+        invoiceState: {},
+        relatedInvoices: [],
+        warehouseChecks: [],
+        latestWarehouseCheck: {},
+        invoiceEvents: [],
+        quickPurchaseRequests: [],
+        quickStockReceipts: [],
+        phieus: [],
+        packageCount: 0
+      },
+      isLoading: false
+    },
+    computed: {
+      currentInvoice() {
+        return this.detail.currentInvoice || {}
+      },
+      invoiceState() {
+        return this.detail.invoiceState || {}
+      },
+      latestWarehouseCheck() {
+        return this.detail.latestWarehouseCheck || {}
+      },
+      relatedInvoices() {
+        return this.detail.relatedInvoices || []
+      }
+    },
+    methods: {
+      loadData() {
+        var params = new URLSearchParams(window.location.search)
+        var code = params.get('code') || ''
+        if (!code) {
+          return
+        }
+        this.isLoading = true
+        $.get('/api/invoices/detail/' + code, data => {
+          this.detail = Object.assign({}, this.detail, data || {})
+        }).always(() => {
+          this.isLoading = false
+        })
+      },
+      invoiceStatusTitle(status) {
+        return window.getInvoiceStatusMeta(status).title
+      },
+      invoiceStatusLabel(status) {
+        var meta = window.getInvoiceStatusMeta(status)
+        return meta.key + ' - ' + meta.title
+      },
+      invoiceBadgeClass(status) {
+        return 'badge-' + window.getInvoiceStatusMeta(status).style
+      },
+      whcStatusTitle(status) {
+        var map = {
+          draft: 'Draft',
+          checking: 'Đang kiểm tra',
+          completed: 'Đã hoàn tất'
+        }
+        return map[status] || status || 'Draft'
+      },
+      whcBadgeClass(status) {
+        var map = {
+          draft: 'badge-secondary',
+          checking: 'badge-warning',
+          completed: 'badge-success'
+        }
+        return map[status] || 'badge-light'
+      },
+      conclusionTitle(value) {
+        var map = {
+          enough: 'Đủ hàng',
+          shortage: 'Thiếu hàng'
+        }
+        return map[value] || 'Chưa kết luận'
+      },
+      conclusionBadgeClass(value) {
+        var map = {
+          enough: 'badge-success',
+          shortage: 'badge-danger'
+        }
+        return map[value] || 'badge-light'
+      },
+      decisionTitle(status) {
+        var map = {
+          pending_stock_review: 'Chờ kho kiểm tra',
+          pending_sale_decision: 'Chờ Sale quyết định',
+          purchase_selected: 'Đã chọn đặt hàng',
+          change_order_selected: 'Đã chọn đổi đơn',
+          done: 'Đã hoàn tất'
+        }
+        return map[status] || status || '-'
+      },
+      saleDecisionTitle(value) {
+        var map = {
+          purchase_more: 'Đặt hàng thêm',
+          change_order: 'Đổi đơn'
+        }
+        return map[value] || '-'
+      },
+      eventTitle(event) {
+        var eventTypeMap = {
+          warehouse_check_created: 'Tạo phiếu kiểm tra kho',
+          warehouse_check_refreshed: 'Làm mới phiếu kiểm tra kho',
+          warehouse_check_completed: 'Hoàn tất phiếu kiểm tra kho',
+          warehouse_check_confirmed: 'Xác nhận đủ hàng',
+          warehouse_check_shortage_detected: 'Kết luận thiếu hàng',
+          sale_decision_purchase_more: 'Sale chọn đặt hàng thêm',
+          sale_decision_change_order: 'Sale chọn đổi đơn',
+          quick_purchase_created: 'Tạo phiếu đặt hàng nhanh',
+          quick_stock_receipt_created: 'Tạo phiếu nhập hàng nhanh',
+          auto_closed_legacy_invoice: 'Tự động đóng dữ liệu cũ'
+        }
+        return eventTypeMap[event.eventType] || event.eventType || 'Sự kiện xử lý'
+      },
+      eventStatusLabel(event) {
+        if (event.fromStatus && event.toStatus) {
+          return event.fromStatus + ' -> ' + event.toStatus
+        }
+        if (event.toStatus) {
+          return event.toStatus
+        }
+        return 'Log'
+      },
+      eventBadgeClass(event) {
+        if (event.toStatus === 'B10') {
+          return 'badge-dark'
+        }
+        if (event.toStatus === 'B2' || event.eventType === 'warehouse_check_completed') {
+          return 'badge-success'
+        }
+        if (event.toStatus === 'B3') {
+          return 'badge-warning'
+        }
+        if (event.toStatus === 'B4' || event.toStatus === 'B5') {
+          return 'badge-primary'
+        }
+        return 'badge-secondary'
+      },
+      formatEventMeta(event) {
+        var actor = event.actorName || event.actorUsername || event.actorRole || 'Hệ thống'
+        var time = event.createdAt ? moment(event.createdAt).format('DD/MM/YYYY HH:mm') : '-'
+        var invoiceCode = event.invoiceCode || '-'
+        return actor + ' | ' + time + ' | ' + invoiceCode
+      },
+      eventExtraText(event) {
+        var payload = event.payload || {}
+        if (payload.replacementInvoiceCode) {
+          return 'Đơn thay thế: ' + payload.replacementInvoiceCode
+        }
+        if (typeof payload.shortageCount === 'number') {
+          return 'Số mã đang thiếu: ' + payload.shortageCount
+        }
+        if (typeof payload.itemCount === 'number') {
+          return 'Số dòng liên quan: ' + payload.itemCount
+        }
+        if (payload.relatedInvoiceCodes && payload.relatedInvoiceCodes.length) {
+          return 'Các version liên quan: ' + payload.relatedInvoiceCodes.join(', ')
+        }
+        return ''
+      },
+      formatDate(value) {
+        return value ? moment(value).format('DD/MM/YYYY HH:mm') : '-'
+      },
+      formatMoney(value) {
+        return new Intl.NumberFormat('vi-VN').format(Number(value || 0))
+      },
+      packageCountLabel() {
+        return this.detail.packageCount || 0
+      }
+    },
+    created() {
+      this.loadData()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>

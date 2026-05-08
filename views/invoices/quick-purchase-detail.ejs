@@ -1,0 +1,264 @@
+<%- include('../partials/invoice-shell-open.ejs', {
+  title: 'Chi tiết phiếu đặt hàng nhanh',
+  pageTitle: 'Chi tiết phiếu đặt hàng nhanh',
+  pageSubtitle: 'Theo dõi một Quick Purchase Request như một đối tượng độc lập, cho phép chỉnh số lượng và đổi trạng thái xử lý.',
+  currentPath: '/invoices/quick-purchase',
+  currentUser: currentUser
+}) %>
+<div id="quick-purchase-detail-page">
+  <div class="app-loading app-loading-card" v-if="isLoading">
+    <div class="spinner-border text-primary" role="status"></div>
+    <div>Đang tải chi tiết phiếu đặt hàng nhanh...</div>
+  </div>
+
+  <template v-if="!isLoading && item.id">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <div class="app-step-chip">Quick Purchase Request | Entity độc lập</div>
+        <h2 class="h4 mb-1">Phiếu {{ item.id }}</h2>
+        <div class="text-muted">Mã tham chiếu: {{ item.referenceCode || '-' }}</div>
+      </div>
+      <div class="btn-group">
+        <a class="btn btn-outline-dark" :href="'/invoices/warehouse-check?code=' + item.invoiceCode">Phiếu kho</a>
+        <a class="btn btn-outline-secondary" :href="'/invoices/detail?code=' + item.invoiceCode">Chi tiết đơn</a>
+        <a class="btn btn-outline-secondary" href="/invoices/quick-purchase">Danh sách phiếu</a>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Trạng thái</div>
+            <div class="mt-2"><span class="badge" :class="statusBadgeClass(item.status)">{{ statusTitle(item.status) }}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Mã đơn</div>
+            <div class="mt-2">{{ item.invoiceCode || '-' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Người tạo</div>
+            <div class="mt-2">{{ item.createdByName || item.createdByUsername || '-' }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 mb-3">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="small text-muted">Ngày tạo</div>
+            <div class="mt-2">{{ item.createdAt ? moment(item.createdAt).format('DD/MM/YYYY HH:mm') : '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="form-row align-items-end">
+          <div class="col-md-10">
+            <label>Tóm tắt</label>
+            <input class="form-control" v-model="draft.summary" :disabled="isLocked()">
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-outline-primary btn-block" @click="saveChanges()" :disabled="isLocked()">Lưu phiếu</button>
+          </div>
+        </div>
+        <div class="mt-3 d-flex justify-content-end">
+          <button class="btn btn-outline-danger" @click="cancelRequest()" :disabled="item.status === 'cancelled'">Hủy phiếu</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">Nội dung gửi nhà cung cấp</h5>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" @click="regenerateSupplierMessage()" :disabled="isLocked()">Tạo lại nội dung</button>
+            <button class="btn btn-outline-success" @click="markOrdered()" :disabled="isLocked() || !draft.supplierMessage.trim()">Đã đặt hàng</button>
+          </div>
+        </div>
+        <textarea class="form-control" rows="8" v-model="draft.supplierMessage" :disabled="isLocked()"></textarea>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h5 class="mb-3">Danh sách mã hàng cần đặt</h5>
+        <table class="table table-bordered table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Mã SP</th>
+              <th>Tên sản phẩm</th>
+              <th>SL cần</th>
+              <th>SL yêu cầu đặt</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="line in draft.items" :key="line.productCode">
+              <td>{{ line.productCode || '-' }}</td>
+              <td>{{ line.productName || '-' }}</td>
+              <td>{{ line.requiredQty || 0 }}</td>
+              <td style="width: 220px;">
+                <input type="number" min="0" class="form-control" v-model.number="line.requestedQty" :disabled="isLocked()">
+              </td>
+            </tr>
+            <tr v-if="!draft.items || draft.items.length === 0">
+              <td colspan="4" class="text-center text-muted">Phiếu chưa có dòng hàng.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <div class="alert alert-warning" v-if="!isLoading && !item.id">
+    Không tìm thấy phiếu đặt hàng nhanh.
+  </div>
+</div>
+
+<script>
+  new Vue({
+    el: '#quick-purchase-detail-page',
+    data: {
+      item: {},
+      draft: {
+        summary: '',
+        supplierMessage: '',
+        status: 'created',
+        items: []
+      },
+      isLoading: false,
+      statuses: [
+        { key: 'created', title: 'Đã tạo' },
+        { key: 'ordered', title: 'Đã đặt NCC' },
+        { key: 'received', title: 'Đã nhận hàng' },
+        { key: 'cancelled', title: 'Đã hủy' }
+      ]
+    },
+    methods: {
+      loadData() {
+        this.isLoading = true
+        $.get('/api/quick-purchase-requests/<%= quickPurchaseRequestId %>', data => {
+          this.item = data || {}
+          var normalizedStatus = this.item.status === 'requested' ? 'created' : (this.item.status || 'created')
+          this.draft = {
+            summary: this.item.summary || '',
+            supplierMessage: this.item.supplierMessage || this.buildSupplierMessage(this.item.items || []),
+            items: Array.isArray(this.item.items) ? this.item.items.map(function (line) {
+              return Object.assign({}, line)
+            }) : []
+          }
+        }).always(() => {
+          this.isLoading = false
+        })
+      },
+      saveChanges() {
+        if (this.isLocked()) {
+          return
+        }
+        $.ajax({
+          url: '/api/quick-purchase-requests/<%= quickPurchaseRequestId %>',
+          method: 'PUT',
+          contentType: 'application/json',
+          data: JSON.stringify(this.draft)
+        }).done(data => {
+          this.item = data || {}
+          this.loadData()
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không thể lưu phiếu đặt hàng nhanh')
+        })
+      },
+      buildSupplierMessage(items) {
+        return (Array.isArray(items) ? items : [])
+          .filter(function (line) {
+            return Number(line.requestedQty || 0) > 0
+          })
+          .map(function (line) {
+            return line.productName + ' - SL: ' + Number(line.requestedQty || 0)
+          })
+          .join('\n')
+      },
+      regenerateSupplierMessage() {
+        this.draft.supplierMessage = this.buildSupplierMessage(this.draft.items)
+      },
+      markOrdered() {
+        if (this.isLocked()) {
+          return
+        }
+        if (!this.draft.supplierMessage.trim()) {
+          alert('Vui lòng có nội dung gửi nhà cung cấp trước khi báo đã đặt hàng.')
+          return
+        }
+        $.ajax({
+          url: '/api/quick-purchase-requests/<%= quickPurchaseRequestId %>',
+          method: 'PUT',
+          contentType: 'application/json',
+          data: JSON.stringify({
+            summary: this.draft.summary,
+            supplierMessage: this.draft.supplierMessage,
+            status: 'ordered',
+            items: this.draft.items
+          })
+        }).done(data => {
+          this.item = data || {}
+          this.loadData()
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không thể cập nhật trạng thái đã đặt hàng')
+        })
+      },
+      cancelRequest() {
+        if (!window.confirm('Xác nhận hủy phiếu đặt hàng nhanh này?')) {
+          return
+        }
+        $.ajax({
+          url: '/api/quick-purchase-requests/<%= quickPurchaseRequestId %>',
+          method: 'PUT',
+          contentType: 'application/json',
+          data: JSON.stringify({ status: 'cancelled' })
+        }).done(data => {
+          this.item = data || {}
+          this.loadData()
+        }).fail(xhr => {
+          alert((xhr.responseJSON && xhr.responseJSON.message) || 'Không thể hủy phiếu đặt hàng nhanh')
+        })
+      },
+      isLocked() {
+        return ['ordered', 'received', 'cancelled'].includes(this.item.status)
+      },
+      statusTitle(status) {
+        if (status === 'requested') {
+          status = 'created'
+        }
+        var matched = this.statuses.find(function (item) {
+          return item.key === status
+        })
+        return matched ? matched.title : (status || '-')
+      },
+      statusBadgeClass(status) {
+        if (status === 'requested') {
+          status = 'created'
+        }
+        var map = {
+          created: 'badge-warning',
+          ordered: 'badge-primary',
+          received: 'badge-success',
+          cancelled: 'badge-dark'
+        }
+        return map[status] || 'badge-secondary'
+      }
+    },
+    created() {
+      this.loadData()
+    }
+  })
+</script>
+<%- include('../partials/invoice-shell-close.ejs') %>

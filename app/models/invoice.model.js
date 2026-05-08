@@ -1,10 +1,16 @@
 module.exports = mongoose => {
     var schema = mongoose.Schema(
         {
+            referenceCode: String,
             code: String,
             actions: Array,
             notes: Array,
-            status: String
+            status: String,
+            activeInvoiceCode: String,
+            latestWarehouseCheckId: String,
+            changeWarningLevel: String,
+            changeWarningSummary: String,
+            relatedInvoiceCodes: Array
         },
         { timestamps: true }
     );

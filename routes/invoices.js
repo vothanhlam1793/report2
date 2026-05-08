@@ -29,6 +29,30 @@ router.get('/ship', (req, res) => {
   res.render('invoices/ship')
 })
 
+router.get('/shortage', (req, res) => {
+  res.render('invoices/shortage')
+})
+
+router.get('/warehouse-check', (req, res) => {
+  res.render('invoices/warehouse-check')
+})
+
+router.get('/quick-purchase', (req, res) => {
+  res.render('invoices/quick-purchase')
+})
+
+router.get('/quick-purchase/:id', (req, res) => {
+  res.render('invoices/quick-purchase-detail', { quickPurchaseRequestId: req.params.id })
+})
+
+router.get('/quick-receipt', (req, res) => {
+  res.render('invoices/quick-receipt')
+})
+
+router.get('/quick-receipt/:id', (req, res) => {
+  res.render('invoices/quick-receipt-detail', { quickStockReceiptId: req.params.id })
+})
+
 router.get('/summary', (req, res) => {
   res.render('invoices/summary')
 })

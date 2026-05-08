@@ -7,7 +7,7 @@ class CustomerKiot {
         return kiot.getKiotViet("https://public.kiotapi.com/customers/code/" + this.code + "?");
     }
     fetchAll = (pNew) => {
-        return kiot.getFullCustomer(pNew);
+        return kiot.getFullCustomer();
     }
 }
 
@@ -19,7 +19,7 @@ class InvoiceKiot {
         return kiot.getKiotViet("https://public.kiotapi.com/invoices/code/" + this.code + "?");
     }
     fetchAll = (pNew) => {
-        return kiot.getFullInvoice(pNew);
+        return kiot.getFullInvoice();
     }
 }
 
@@ -28,10 +28,10 @@ class ProductKiot {
         this.code = code;
     }
     fetch = () => {
-        return kiot.getKiotViet("https://public.kiotapi.com/products/code/" + this.code + "?");
+        return kiot.getProductByCodeWithInventory(this.code);
     }
     fetchAll = (pNew) => {
-        return kiot.getFullInvoice(pNew);
+        return kiot.getFullProduct();
     }
 }
 
