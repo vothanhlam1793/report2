@@ -4,3 +4,4 @@ package-lock.json
 *.log
 uploads/
 tmp/
+sync-history/reports/

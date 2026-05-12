@@ -212,3 +212,76 @@ Lịch sync đề xuất:
 - `sync-invoices --since YYYY-MM-DD`: chạy tay khi cần backfill
 
 Xem `sync-kiot-odoo/README.md` để biết chi tiết cài đặt.
+
+---
+
+## Kế hoạch Odoo: supplier hints từ report
+
+### Mục tiêu
+- Không tiếp tục phụ thuộc vào việc ghi `orderTemplate` ngược về KiotViet vì Public API không update được field này.
+- Đưa dữ liệu gợi ý NCC từ file `sync-history/reports/supplier-sync-1778259591-write.json` lên Odoo.
+- Lưu dữ liệu trên model `product.product` vào custom field `x_supplier_hints`.
+
+### Bối cảnh đã xác minh
+- Kết nối Odoo JSON-RPC trong `.env` hoạt động.
+- Adapter Odoo hiện tại của `report2` đang đọc sản phẩm qua model `product.product`.
+- Có thể map sản phẩm Odoo theo `default_code = productCode`.
+- Report `supplier-sync-1778259591-write.json` hiện có `2049` record thay đổi.
+- Mã test đã xác minh trên Odoo:
+  - `default_code = SP901470`
+  - `product.product.id = 3177`
+  - `name = IPC-PS7FP-3M0-IMOU`
+- Dữ liệu cần ghi lên Odoo là `results[].nextOrderTemplate`.
+
+### Kết quả mong muốn
+- Odoo có field custom `x_supplier_hints` trên `product.product`.
+- Với từng sản phẩm match theo `default_code`, field `x_supplier_hints` chứa nội dung gợi ý NCC từ report.
+- Bắt đầu bằng test đúng `SP901470`, sau đó mới bulk toàn bộ.
+
+### Kế hoạch thực hiện
+1. Vào server Odoo với tài khoản có quyền kỹ thuật hoặc admin.
+2. Kiểm tra field `x_supplier_hints` đã tồn tại trên `product.product` chưa.
+3. Nếu chưa có, tạo custom field:
+   - model: `product.product`
+   - technical name: `x_supplier_hints`
+   - label: `Supplier Hints`
+   - type: `Text`
+   - state: `manual`
+4. Xác minh field mới có thể đọc/ghi qua JSON-RPC.
+5. Đọc file `sync-history/reports/supplier-sync-1778259591-write.json`.
+6. Với mỗi record trong `results`:
+   - lấy `productCode`
+   - map sang Odoo bằng `product.product.default_code`
+   - lấy `nextOrderTemplate`
+7. Chỉ update các record có:
+   - `action` là `append` hoặc `replace`
+   - `nextOrderTemplate` không rỗng
+8. Chạy thử trước cho đúng `SP901470`.
+9. Đọc lại Odoo để xác minh giá trị sau update.
+10. Nếu test đúng ý, chạy bulk toàn bộ file report.
+11. Ghi log kết quả bulk:
+   - tổng số record trong report
+   - số sản phẩm tìm thấy trên Odoo
+   - số update thành công
+   - số không tìm thấy
+   - số lỗi
+
+### Quy tắc map dữ liệu
+- Nguồn: `results[].productCode`
+- Đích: `product.product.default_code`
+- Giá trị ghi: `results[].nextOrderTemplate`
+- Field đích: `x_supplier_hints`
+
+### Quy tắc an toàn
+- Chỉ test `SP901470` trước khi bulk.
+- Nếu một `default_code` match nhiều `product.product`, dừng record đó và log lỗi.
+- Không tự ghi đè các record không map rõ ràng.
+- Giữ log audit cho toàn bộ đợt sync.
+
+### Việc có thể làm tiếp sau khi upload xong
+1. Sửa `routes/adapter/odoo.js` để đọc thêm `x_supplier_hints`.
+2. Hiển thị `x_supplier_hints` trong UI nơi đang cần gợi ý NCC.
+3. Chọn nguồn ưu tiên cho supplier hints:
+   - Odoo `x_supplier_hints`
+   - fallback KiotViet `orderTemplate`
+   - hoặc hiển thị đồng thời cả hai

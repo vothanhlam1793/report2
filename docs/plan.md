@@ -52,6 +52,45 @@
 | 4.6 | Hiển thị đề xuất NCC trong `WHC` từ `orderTemplate` và `purchaseorders` | ✅ |
 | 4.7 | Tool `sync-history` để build `#NCC-1/#NCC-2` ở mode preview | ✅ |
 | 4.8 | Bật mode `write` an toàn cho tool sync `orderTemplate` | ⬜ |
+| 4.9 | Chuyển supplier hints sang Odoo field `x_supplier_hints` | ⬜ |
+
+### Phase 4.9 — Chuyển supplier hints sang Odoo
+
+Mục tiêu:
+
+- không dùng `orderTemplate` KiotViet làm nguồn chính cho gợi ý NCC nữa
+- chuyển metadata NCC đề xuất sang Odoo để `report2` đọc ổn định hơn
+- giữ format machine-readable để UI chỉ cần hiển thị cho staff/admin tự chọn NCC
+
+Field Odoo dự kiến:
+
+- model: `product.product`
+- field: `x_supplier_hints`
+- type: `Text`
+
+Format nội dung dự kiến:
+
+```text
+#NCC-1: CODE | NAME
+#NCC-2: CODE | NAME
+```
+
+Checklist triển khai:
+
+| # | Task | Status |
+|---|---|---|
+| 4.9.1 | Bên Odoo thêm field `x_supplier_hints` (`Text`) trên `product.product` | ⬜ |
+| 4.9.2 | Dự án sync KiotViet -> Odoo build `#NCC-1/#NCC-2` từ `purchaseorders` | ⬜ |
+| 4.9.3 | Dự án sync ghi dữ liệu vào `x_supplier_hints` | ⬜ |
+| 4.9.4 | `report2` mở rộng adapter Odoo để đọc `x_supplier_hints` | ⬜ |
+| 4.9.5 | `report2` đổi `supplierSuggestion` sang ưu tiên Odoo, fallback KiotViet | ⬜ |
+| 4.9.6 | Ngừng coi `orderTemplate` KiotViet là nguồn chính cho supplier hints | ⬜ |
+
+Nguyên tắc sau chuyển đổi:
+
+- `report2` chỉ đọc và hiển thị supplier hints
+- việc build/sync `x_supplier_hints` thuộc dự án sync KiotViet -> Odoo
+- UI `WHC` / `Quick Purchase` tiếp tục chỉ hiển thị đề xuất, không auto-pick NCC
 
 ---
 
