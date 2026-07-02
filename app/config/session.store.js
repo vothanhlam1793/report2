@@ -34,6 +34,10 @@ class SessionStore extends EventEmitter {
         this.model.findByIdAndDelete(sid).then(() => callback()).catch(callback)
     }
 
+    createSession(req, sess) {
+        return sess
+    }
+
     touch(sid, session, callback) {
         callback()
     }
