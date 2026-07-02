@@ -43,6 +43,8 @@ db.mongoose
 app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'ejs')
 
+app.locals.version = process.env.APP_VERSION || '1'
+
 // Security middleware
 app.use(helmet({ contentSecurityPolicy: false }))
 app.use(rateLimit({
@@ -67,6 +69,15 @@ app.use(session({
 }))
 
 app.use(express.static(path.join(__dirname, 'public')))
+
+app.use(function (req, res, next) {
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|webp|svg|ico)$/)) {
+    res.set('Cache-Control', 'public, max-age=86400')
+  } else {
+    res.set('Cache-Control', 'no-cache, must-revalidate')
+  }
+  next()
+})
 
 app.get('/login', function (req, res) {
   if (req.session.user) {
