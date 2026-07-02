@@ -39,6 +39,10 @@ class SessionStore extends EventEmitter {
         }).catch(callback)
     }
 
+    createSession(req, sess) {
+        return sess
+    }
+
     touch(sid, session, callback) {
         if (session && session.cookie && session.cookie.maxAge) {
             this.model.findByIdAndUpdate(sid, {
