@@ -4,7 +4,9 @@ module.exports = mongoose => {
             code: String,
             actions: Array,
             notes: Array,
-            status: String
+            status: String,
+            has_packed_images: { type: Boolean, default: false },
+            has_delivery_images: { type: Boolean, default: false }
         },
         { timestamps: true }
     );

@@ -15,4 +15,5 @@ db.phieus = require("./phieu.model")(mongoose);
 db.series = require("./serie.model")(mongoose);
 db.invoices = require("./invoice.model")(mongoose);
 db.productBarcode = require("./productBarcode.model")(mongoose);
+db.images = require("./image.model")(mongoose);
 module.exports = db;

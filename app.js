@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser')
 var logger = require('morgan')
 var helmet = require('helmet')
 var rateLimit = require('express-rate-limit')
+var session = require('express-session')
 require('dotenv').config()
 
 var indexRouter = require('./routes/index')
@@ -53,7 +54,46 @@ app.use(logger('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'report2-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: (parseInt(process.env.SESSION_MAX_AGE_DAYS) || 7) * 24 * 60 * 60 * 1000
+  }
+}))
+
 app.use(express.static(path.join(__dirname, 'public')))
+
+app.get('/login', function (req, res) {
+  if (req.session.user) {
+    return res.redirect(req.query.redirect || '/')
+  }
+  res.render('login', { error: null })
+})
+
+app.post('/login', function (req, res) {
+  const users = {
+    admin: process.env.ADMIN_PASSWORD || 'admin123',
+    huu: process.env.HUU_PASSWORD || 'huu123',
+    huyen: process.env.HUYEN_PASSWORD || 'huyen123'
+  }
+  const { username, password } = req.body
+  if (users[username] && users[username] === password) {
+    req.session.user = username
+    return res.redirect(req.query.redirect || '/')
+  }
+  res.render('login', { error: 'Sai tên đăng nhập hoặc mật khẩu' })
+})
+
+app.get('/logout', function (req, res) {
+  req.session.destroy()
+  res.redirect('/login')
+})
+
+const auth = require('./app/middleware/auth')
+app.use(auth)
 
 app.use('/', indexRouter)
 app.use('/crm', crmRouter)
@@ -75,6 +115,7 @@ require('./app/routes/phieu.route')(app)
 require('./app/routes/transaction.route')(app)
 require('./app/routes/productBarcode.route')(app)
 require('./app/routes/campaign.route')(app)
+require('./app/routes/image.route')(app)
 
 // 404 handler
 app.use(function (req, res, next) {
