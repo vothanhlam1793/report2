@@ -31,6 +31,8 @@ db.mongoose
   .connect(db.url, dbOptions)
   .then(() => {
     console.log('Connected to the database!')
+    const { seedUsers } = require('./app/controllers/auth.controller')
+    seedUsers()
   })
   .catch(err => {
     console.log('Cannot connect to the database!', err)
@@ -73,18 +75,20 @@ app.get('/login', function (req, res) {
   res.render('login', { error: null })
 })
 
-app.post('/login', function (req, res) {
-  const users = {
-    admin: process.env.ADMIN_PASSWORD || 'admin123',
-    huu: process.env.HUU_PASSWORD || 'huu123',
-    huyen: process.env.HUYEN_PASSWORD || 'huyen123'
-  }
+app.post('/login', async function (req, res) {
+  const { login } = require('./app/controllers/auth.controller')
   const { username, password } = req.body
-  if (users[username] && users[username] === password) {
-    req.session.user = username
-    return res.redirect(req.query.redirect || '/')
+  try {
+    const user = await login(username, password)
+    if (user) {
+      req.session.user = user
+      return res.redirect(req.query.redirect || '/')
+    }
+    res.render('login', { error: 'Sai tên đăng nhập hoặc mật khẩu' })
+  } catch (e) {
+    console.log(e)
+    res.render('login', { error: 'Lỗi hệ thống, thử lại sau' })
   }
-  res.render('login', { error: 'Sai tên đăng nhập hoặc mật khẩu' })
 })
 
 app.get('/logout', function (req, res) {

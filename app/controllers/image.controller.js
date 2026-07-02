@@ -39,7 +39,7 @@ exports.upload = async (req, res) => {
             filename: compressedFilename,
             type: type,
             note: note,
-            uploaded_by: req.session.user || 'unknown'
+            uploaded_by: req.session.user?.username || 'unknown'
         })
 
         const data = await image.save()

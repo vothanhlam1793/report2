@@ -16,4 +16,5 @@ db.series = require("./serie.model")(mongoose);
 db.invoices = require("./invoice.model")(mongoose);
 db.productBarcode = require("./productBarcode.model")(mongoose);
 db.images = require("./image.model")(mongoose);
+db.users = require("./user.model")(mongoose);
 module.exports = db;
