@@ -1,7 +1,9 @@
 const mongoose = require('mongoose')
+const EventEmitter = require('events')
 
-class SessionStore {
+class SessionStore extends EventEmitter {
     constructor() {
+        super()
         this.model = mongoose.model('Session', new mongoose.Schema({
             _id: String,
             session: mongoose.Schema.Types.Mixed,
