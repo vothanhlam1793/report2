@@ -1,10 +1,11 @@
 const mongoose = require('mongoose')
+const EventEmitter = require('events')
 
 function collection() {
     return mongoose.connection.db.collection('sessions')
 }
 
-class SessionStore {
+class SessionStore extends EventEmitter {
     constructor() {
         this.ready = false
         mongoose.connection.on('connected', () => { this.ready = true })
