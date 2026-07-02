@@ -3,6 +3,9 @@ const ImageModel = db.images
 const InvoiceModel = db.invoices
 const fs = require('fs')
 const path = require('path')
+const sharp = require('sharp')
+
+const UPLOAD_DIR = path.join(__dirname, '../../public/uploads/invoices')
 
 exports.upload = async (req, res) => {
     try {
@@ -18,10 +21,22 @@ exports.upload = async (req, res) => {
             return res.status(400).json({ message: "Type không hợp lệ" })
         }
 
+        const originalPath = req.file.path
+        const baseName = path.parse(req.file.filename).name
+        const compressedFilename = baseName + '.jpg'
+        const compressedPath = path.join(UPLOAD_DIR, compressedFilename)
+
+        await sharp(originalPath)
+            .resize({ width: 1920, withoutEnlargement: true })
+            .jpeg({ quality: 80 })
+            .toFile(compressedPath)
+
+        fs.unlinkSync(originalPath)
+
         const image = new ImageModel({
             invoice_code: invoice_code,
-            url: '/uploads/invoices/' + req.file.filename,
-            filename: req.file.filename,
+            url: '/uploads/invoices/' + compressedFilename,
+            filename: compressedFilename,
             type: type,
             note: note,
             uploaded_by: req.session.user || 'unknown'

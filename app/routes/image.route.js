@@ -25,7 +25,7 @@ const fileFilter = function (req, file, cb) {
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 100 * 1024 * 1024 }
 })
 
 module.exports = app => {
@@ -39,7 +39,7 @@ module.exports = app => {
   router.use(function (err, req, res, next) {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ message: 'File quá lớn. Tối đa 10MB' })
+        return res.status(400).json({ message: 'File quá lớn. Tối đa 100MB' })
       }
       return res.status(400).json({ message: err.message })
     }
