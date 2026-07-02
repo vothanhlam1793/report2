@@ -22,8 +22,7 @@ exports.upload = async (req, res) => {
         }
 
         const originalPath = req.file.path
-        const baseName = path.parse(req.file.filename).name
-        const compressedFilename = baseName + '.jpg'
+        const compressedFilename = Date.now() + '-' + Math.round(Math.random() * 1E9) + '.jpg'
         const compressedPath = path.join(UPLOAD_DIR, compressedFilename)
 
         await sharp(originalPath)
