@@ -50,5 +50,7 @@ RUN npm ci --omit=dev
 # Bundle app source
 COPY . .
 
+RUN mkdir -p public/uploads/invoices
+
 EXPOSE 3000
 CMD [ "node", "./bin/www" ]
