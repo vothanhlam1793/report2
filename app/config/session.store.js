@@ -1,37 +1,35 @@
 const mongoose = require('mongoose')
-const EventEmitter = require('events')
 
-class SessionStore extends EventEmitter {
+function collection() {
+    return mongoose.connection.db.collection('sessions')
+}
+
+class SessionStore {
     constructor() {
-        super()
-        this.model = mongoose.model('Session', new mongoose.Schema({
-            _id: String,
-            session: mongoose.Schema.Types.Mixed,
-            expires: Date
-        }, { timestamps: true }))
+        this.ready = false
+        mongoose.connection.on('connected', () => { this.ready = true })
     }
 
     get(sid, callback) {
-        this.model.findById(sid).then(doc => {
+        if (!this.ready) return callback(null, null)
+        collection().findOne({ _id: sid }).then(doc => {
             if (!doc) return callback(null, null)
             callback(null, doc.session)
         }).catch(err => callback(err))
     }
 
     set(sid, session, callback) {
+        if (!this.ready) return callback()
         const expires = session.cookie?.maxAge
             ? new Date(Date.now() + session.cookie.maxAge)
             : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        this.model.findByIdAndUpdate(sid, {
-            session: session,
-            expires: expires
-        }, { upsert: true, new: true, setDefaultsOnInsert: true }).then(() => {
-            callback()
-        }).catch(callback)
+        collection().updateOne({ _id: sid }, { $set: { session, expires } }, { upsert: true })
+            .then(() => callback()).catch(callback)
     }
 
     destroy(sid, callback) {
-        this.model.findByIdAndDelete(sid).then(() => callback()).catch(callback)
+        if (!this.ready) return callback()
+        collection().deleteOne({ _id: sid }).then(() => callback()).catch(callback)
     }
 
     createSession(req, sess) {
