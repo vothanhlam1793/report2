@@ -6,6 +6,7 @@ var logger = require('morgan')
 var helmet = require('helmet')
 var rateLimit = require('express-rate-limit')
 var session = require('express-session')
+var MongoStore = require('connect-mongo')
 require('dotenv').config()
 
 var indexRouter = require('./routes/index')
@@ -63,6 +64,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'report2-session-secret',
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({ mongoUrl: db.url }),
   cookie: {
     maxAge: (parseInt(process.env.SESSION_MAX_AGE_DAYS) || 7) * 24 * 60 * 60 * 1000
   }
